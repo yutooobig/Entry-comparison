@@ -20,22 +20,18 @@
             --text: #2c3e50;
             --text-secondary: #7f8c8d;
             --border: #e1e5eb;
-            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,0.15);
             --radius: 12px;
             --radius-sm: 8px;
             --radius-xs: 5px;
-            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
             --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
             --header-height: 60px;
             --filter-height: 48px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: var(--font);
             background: var(--bg);
@@ -44,1050 +40,198 @@
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
         }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #c0c4cc;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a0a4ac;
-        }
+        ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#c0c4cc; border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:#a0a4ac; }
 
         .app-header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: var(--sidebar-bg);
-            color: var(--sidebar-text);
+            position: sticky; top:0; z-index:100;
+            background: var(--sidebar-bg); color: var(--sidebar-text);
             height: var(--header-height);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items:center; justify-content:space-between;
             padding: 0 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
-        .app-header .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            font-size: 18px;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-        }
-        .app-header .logo i {
-            color: #6c8cff;
-            font-size: 22px;
-        }
-        .header-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
+        .app-header .logo { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; letter-spacing:0.5px; white-space:nowrap; }
+        .app-header .logo i { color:#6c8cff; font-size:22px; }
+        .header-actions { display:flex; gap:8px; align-items:center; flex-wrap:nowrap; }
         .header-btn {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 8px 14px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: var(--transition);
-            white-space: nowrap;
-            font-family: var(--font);
+            background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); color:#fff;
+            padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:500;
+            display:flex; align-items:center; gap:6px; transition:var(--transition); white-space:nowrap; font-family:var(--font);
         }
-        .header-btn:hover {
-            background: rgba(255, 255, 255, 0.22);
-            border-color: rgba(255, 255, 255, 0.35);
-        }
-        .header-btn i {
-            font-size: 14px;
-        }
-        .header-btn.primary {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-        .header-btn.primary:hover {
-            background: var(--primary-hover);
-            border-color: var(--primary-hover);
-        }
+        .header-btn:hover { background:rgba(255,255,255,0.22); border-color:rgba(255,255,255,0.35); }
+        .header-btn i { font-size:14px; }
+        .header-btn.primary { background:var(--primary); border-color:var(--primary); }
+        .header-btn.primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
 
         .filter-bar {
-            position: sticky;
-            top: var(--header-height);
-            z-index: 90;
-            background: var(--card-bg);
-            padding: 8px 16px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            min-height: var(--filter-height);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            position: sticky; top:var(--header-height); z-index:90;
+            background: var(--card-bg); padding:8px 16px; border-bottom:1px solid var(--border);
+            display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-height:var(--filter-height);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
-        .filter-bar .filter-label {
-            font-size: 13px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-        .filter-tags {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            align-items: center;
-            flex: 1;
-        }
+        .filter-bar .filter-label { font-size:13px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; font-weight:500; white-space:nowrap; }
+        .filter-tags { display:flex; gap:6px; flex-wrap:wrap; align-items:center; flex:1; }
         .filter-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: #eef1ff;
-            color: var(--primary);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            border: 1px solid #d5dcff;
+            display:inline-flex; align-items:center; gap:5px; background:#eef1ff; color:var(--primary);
+            padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; transition:var(--transition); border:1px solid #d5dcff;
         }
-        .filter-tag:hover {
-            background: #dfe5ff;
-        }
-        .filter-tag i {
-            font-size: 10px;
-            cursor: pointer;
-            opacity: 0.7;
-        }
-        .filter-tag i:hover {
-            opacity: 1;
-        }
-        .clear-filter-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: var(--radius-xs);
-            transition: var(--transition);
-            font-family: var(--font);
-        }
-        .clear-filter-btn:hover {
-            color: var(--danger);
-            background: #fef0ef;
-        }
+        .filter-tag:hover { background:#dfe5ff; }
+        .filter-tag i { font-size:10px; cursor:pointer; opacity:0.7; }
+        .filter-tag i:hover { opacity:1; }
+        .clear-filter-btn { background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--radius-xs); transition:var(--transition); font-family:var(--font); }
+        .clear-filter-btn:hover { color:var(--danger); background:#fef0ef; }
 
-        .main-content {
-            display: flex;
-            min-height: calc(100vh - var(--header-height) - var(--filter-height));
-        }
+        .main-content { display:flex; min-height:calc(100vh - var(--header-height) - var(--filter-height)); }
+        .gallery { flex:1; padding:16px; overflow-y:auto; }
+        .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
+        .gallery-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:50vh; color:var(--text-secondary); gap:14px; text-align:center; padding:20px; }
+        .gallery-empty i { font-size:60px; opacity:0.4; }
+        .gallery-empty p { font-size:15px; max-width:320px; line-height:1.6; }
+        .gallery-empty .upload-hint-btn { background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:var(--radius-sm); cursor:pointer; font-size:14px; font-weight:500; transition:var(--transition); font-family:var(--font); display:flex; align-items:center; gap:8px; }
+        .gallery-empty .upload-hint-btn:hover { background:var(--primary-hover); }
 
-        .gallery {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-        }
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 14px;
-        }
-        .gallery-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 50vh;
-            color: var(--text-secondary);
-            gap: 14px;
-            text-align: center;
-            padding: 20px;
-        }
-        .gallery-empty i {
-            font-size: 60px;
-            opacity: 0.4;
-        }
-        .gallery-empty p {
-            font-size: 15px;
-            max-width: 320px;
-            line-height: 1.6;
-        }
-        .gallery-empty .upload-hint-btn {
-            background: var(--primary);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: var(--transition);
-            font-family: var(--font);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .gallery-empty .upload-hint-btn:hover {
-            background: var(--primary-hover);
-        }
+        .image-card { background:var(--card-bg); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); transition:var(--transition); cursor:pointer; position:relative; border:2px solid transparent; display:flex; flex-direction:column; }
+        .image-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
+        .image-card.selected { border-color:var(--primary); }
+        .image-card .thumb-wrapper { position:relative; width:100%; aspect-ratio:1/1; overflow:hidden; background:#f0f0f0; flex-shrink:0; }
+        .image-card .thumb-wrapper img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.3s ease; }
+        .image-card:hover .thumb-wrapper img { transform:scale(1.04); }
+        .image-card .card-info { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:4px; }
+        .image-card .card-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .image-card .card-prompt-preview { font-size:11px; color:var(--text-secondary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
+        .image-card .card-actions { display:flex; gap:4px; padding:6px 8px; border-top:1px solid #f0f0f0; flex-shrink:0; }
+        .card-action-btn { background:none; border:1px solid var(--border); border-radius:var(--radius-xs); padding:5px 8px; cursor:pointer; font-size:11px; color:var(--text-secondary); transition:var(--transition); display:flex; align-items:center; gap:3px; font-family:var(--font); flex:1; justify-content:center; }
+        .card-action-btn:hover { background:#f5f6fa; color:var(--text); }
+        .card-action-btn.copy-pos:hover { background:#eef7f0; color:var(--success); border-color:var(--success); }
+        .card-action-btn.copy-neg:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
+        .card-action-btn.delete-btn:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
 
-        .image-card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-            cursor: pointer;
-            position: relative;
-            border: 2px solid transparent;
-            display: flex;
-            flex-direction: column;
-        }
-        .image-card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
-        }
-        .image-card.selected {
-            border-color: var(--primary);
-        }
-        .image-card .thumb-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1/1;
-            overflow: hidden;
-            background: #f0f0f0;
-            flex-shrink: 0;
-        }
-        .image-card .thumb-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-            transition: transform 0.3s ease;
-        }
-        .image-card:hover .thumb-wrapper img {
-            transform: scale(1.04);
-        }
-        .image-card .card-info {
-            padding: 10px 12px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .image-card .card-name {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .image-card .card-prompt-preview {
-            font-size: 11px;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            word-break: break-all;
-        }
-        .image-card .card-actions {
-            display: flex;
-            gap: 4px;
-            padding: 6px 8px;
-            border-top: 1px solid #f0f0f0;
-            flex-shrink: 0;
-        }
-        .card-action-btn {
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xs);
-            padding: 5px 8px;
-            cursor: pointer;
-            font-size: 11px;
-            color: var(--text-secondary);
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            font-family: var(--font);
-            flex: 1;
-            justify-content: center;
-        }
-        .card-action-btn:hover {
-            background: #f5f6fa;
-            color: var(--text);
-        }
-        .card-action-btn.copy-pos:hover {
-            background: #eef7f0;
-            color: var(--success);
-            border-color: var(--success);
-        }
-        .card-action-btn.copy-neg:hover {
-            background: #fdf0ef;
-            color: var(--danger);
-            border-color: var(--danger);
-        }
-        .card-action-btn.delete-btn:hover {
-            background: #fdf0ef;
-            color: var(--danger);
-            border-color: var(--danger);
-        }
+        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:200; display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(3px); animation:fadeIn 0.2s ease; }
+        .modal-overlay.active { display:flex; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .modal-content { background:var(--card-bg); border-radius:var(--radius); max-width:720px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:slideUp 0.25s ease; display:flex; flex-direction:column; }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0; position:sticky; top:0; background:var(--card-bg); z-index:1; }
+        .modal-header h3 { font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%; }
+        .modal-close-btn { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-secondary); padding:4px 8px; border-radius:var(--radius-xs); transition:var(--transition); }
+        .modal-close-btn:hover { background:#f0f0f0; color:var(--text); }
+        .modal-body { padding:20px; display:flex; flex-direction:column; gap:16px; }
+        .modal-image-container { width:100%; max-height:320px; display:flex; justify-content:center; background:#f8f9fa; border-radius:var(--radius-sm); overflow:hidden; }
+        .modal-image-container img { max-width:100%; max-height:320px; object-fit:contain; }
+        .modal-section { display:flex; flex-direction:column; gap:8px; }
+        .modal-section .section-label { font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px; }
+        .prompt-text { background:#f8f9fa; padding:12px; border-radius:var(--radius-sm); font-size:13px; line-height:1.6; word-break:break-all; max-height:180px; overflow-y:auto; white-space:pre-wrap; font-family:'Consolas','Monaco','Courier New',monospace; border:1px solid #e8e8e8; }
+        .prompt-text.negative { border-left:3px solid var(--danger); }
+        .prompt-text.positive { border-left:3px solid var(--success); }
+        .copy-row { display:flex; gap:6px; flex-wrap:wrap; }
+        .copy-btn { background:#f0f2f5; border:1px solid var(--border); padding:6px 12px; border-radius:var(--radius-xs); cursor:pointer; font-size:12px; display:flex; align-items:center; gap:5px; transition:var(--transition); font-family:var(--font); color:var(--text); }
+        .copy-btn:hover { background:#e4e7eb; }
+        .copy-btn.positive-btn:hover { background:#eef7f0; color:var(--success); border-color:var(--success); }
+        .copy-btn.negative-btn:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
+        .params-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; }
+        .param-item { background:#f8f9fa; padding:8px 10px; border-radius:var(--radius-xs); font-size:12px; display:flex; flex-direction:column; gap:2px; border:1px solid #e8e8e8; }
+        .param-item .param-key { font-weight:600; color:var(--text-secondary); font-size:10px; text-transform:uppercase; letter-spacing:0.3px; }
+        .param-item .param-value { font-weight:500; word-break:break-all; }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 200;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            backdrop-filter: blur(3px);
-            animation: fadeIn 0.2s ease;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        @keyframes slideUp {
-            from {
-                transform: translateY(30px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-        .modal-content {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            max-width: 720px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.25s ease;
-            display: flex;
-            flex-direction: column;
-        }
-        .modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            background: var(--card-bg);
-            z-index: 1;
-        }
-        .modal-header h3 {
-            font-size: 16px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 70%;
-        }
-        .modal-close-btn {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            padding: 4px 8px;
-            border-radius: var(--radius-xs);
-            transition: var(--transition);
-        }
-        .modal-close-btn:hover {
-            background: #f0f0f0;
-            color: var(--text);
-        }
-        .modal-body {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .modal-image-container {
-            width: 100%;
-            max-height: 320px;
-            display: flex;
-            justify-content: center;
-            background: #f8f9fa;
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-        }
-        .modal-image-container img {
-            max-width: 100%;
-            max-height: 320px;
-            object-fit: contain;
-        }
-        .modal-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .modal-section .section-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .prompt-text {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            line-height: 1.6;
-            word-break: break-all;
-            max-height: 180px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            border: 1px solid #e8e8e8;
-        }
-        .prompt-text.negative {
-            border-left: 3px solid var(--danger);
-        }
-        .prompt-text.positive {
-            border-left: 3px solid var(--success);
-        }
-        .copy-row {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .copy-btn {
-            background: #f0f2f5;
-            border: 1px solid var(--border);
-            padding: 6px 12px;
-            border-radius: var(--radius-xs);
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: var(--transition);
-            font-family: var(--font);
-            color: var(--text);
-        }
-        .copy-btn:hover {
-            background: #e4e7eb;
-        }
-        .copy-btn.positive-btn:hover {
-            background: #eef7f0;
-            color: var(--success);
-            border-color: var(--success);
-        }
-        .copy-btn.negative-btn:hover {
-            background: #fdf0ef;
-            color: var(--danger);
-            border-color: var(--danger);
-        }
-        .params-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 8px;
-        }
-        .param-item {
-            background: #f8f9fa;
-            padding: 8px 10px;
-            border-radius: var(--radius-xs);
-            font-size: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            border: 1px solid #e8e8e8;
-        }
-        .param-item .param-key {
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .param-item .param-value {
-            font-weight: 500;
-            word-break: break-all;
-        }
+        .token-sidebar { position:fixed; top:0; right:-420px; width:400px; max-width:90vw; height:100vh; background:var(--card-bg); box-shadow:-4px 0 20px rgba(0,0,0,0.15); z-index:300; transition:right 0.3s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; }
+        .token-sidebar.active { right:0; }
+        .token-sidebar-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--sidebar-bg); color:#fff; }
+        .token-sidebar-header h3 { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .token-sidebar-close { background:none; border:none; color:#fff; font-size:20px; cursor:pointer; padding:4px 8px; border-radius:var(--radius-xs); transition:var(--transition); }
+        .token-sidebar-close:hover { background:rgba(255,255,255,0.15); }
+        .token-tabs { display:flex; gap:4px; padding:10px 16px; background:#f8f9fa; border-bottom:1px solid var(--border); flex-shrink:0; }
+        .token-tab { padding:7px 16px; border-radius:20px; border:none; cursor:pointer; font-size:12px; font-weight:500; transition:var(--transition); font-family:var(--font); background:transparent; color:var(--text-secondary); }
+        .token-tab.active { background:var(--primary); color:#fff; }
+        .token-tab:hover:not(.active) { background:#e9ecf5; }
+        .token-list { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+        .token-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f8f9fa; border-radius:var(--radius-sm); cursor:pointer; transition:var(--transition); border:1px solid transparent; gap:8px; }
+        .token-item:hover { background:#eef1ff; border-color:#d5dcff; }
+        .token-item .token-name { font-size:12px; font-weight:500; word-break:break-all; flex:1; line-height:1.3; }
+        .token-item .token-count { font-size:11px; color:var(--text-secondary); background:#e9ecef; padding:2px 8px; border-radius:10px; font-weight:600; flex-shrink:0; }
+        .token-item .token-count.pos { background:#d4edda; color:#155724; }
+        .token-item .token-count.neg { background:#f8d7da; color:#721c24; }
+        .token-search { padding:10px 16px; flex-shrink:0; position:relative; }
+        .token-search input { width:100%; padding:8px 12px 8px 36px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:var(--font); outline:none; transition:var(--transition); background:#f8f9fa; }
+        .token-search input:focus { border-color:var(--primary); background:#fff; box-shadow:0 0 0 3px rgba(74,108,247,0.1); }
+        .token-search i { position:absolute; left:26px; top:50%; transform:translateY(-50%); color:var(--text-secondary); font-size:13px; }
 
-        .token-sidebar {
-            position: fixed;
-            top: 0;
-            right: -420px;
-            width: 400px;
-            max-width: 90vw;
-            height: 100vh;
-            background: var(--card-bg);
-            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-            z-index: 300;
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-        }
-        .token-sidebar.active {
-            right: 0;
-        }
-        .token-sidebar-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            background: var(--sidebar-bg);
-            color: #fff;
-        }
-        .token-sidebar-header h3 {
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .token-sidebar-close {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: var(--radius-xs);
-            transition: var(--transition);
-        }
-        .token-sidebar-close:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-        .token-tabs {
-            display: flex;
-            gap: 4px;
-            padding: 10px 16px;
-            background: #f8f9fa;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-        .token-tab {
-            padding: 7px 16px;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: var(--transition);
-            font-family: var(--font);
-            background: transparent;
-            color: var(--text-secondary);
-        }
-        .token-tab.active {
-            background: var(--primary);
-            color: #fff;
-        }
-        .token-tab:hover:not(.active) {
-            background: #e9ecf5;
-        }
-        .token-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .token-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: var(--transition);
-            border: 1px solid transparent;
-            gap: 8px;
-        }
-        .token-item:hover {
-            background: #eef1ff;
-            border-color: #d5dcff;
-        }
-        .token-item .token-name {
-            font-size: 12px;
-            font-weight: 500;
-            word-break: break-all;
-            flex: 1;
-            line-height: 1.3;
-        }
-        .token-item .token-count {
-            font-size: 11px;
-            color: var(--text-secondary);
-            background: #e9ecef;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-        .token-item .token-count.pos {
-            background: #d4edda;
-            color: #155724;
-        }
-        .token-item .token-count.neg {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .token-search {
-            padding: 10px 16px;
-            flex-shrink: 0;
-            position: relative;
-        }
-        .token-search input {
-            width: 100%;
-            padding: 8px 12px 8px 36px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-family: var(--font);
-            outline: none;
-            transition: var(--transition);
-            background: #f8f9fa;
-        }
-        .token-search input:focus {
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
-        }
-        .token-search i {
-            position: absolute;
-            left: 26px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
+        .similarity-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:250; display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(3px); }
+        .similarity-overlay.active { display:flex; }
+        .similarity-panel { background:var(--card-bg); border-radius:var(--radius); max-width:800px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:slideUp 0.25s ease; display:flex; flex-direction:column; }
+        .similarity-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; position:sticky; top:0; background:var(--card-bg); z-index:1; }
+        .similarity-header h3 { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+        .similarity-body { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+        .threshold-control { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 0; }
+        .threshold-control label { font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px; }
+        .threshold-control input[type="range"] { flex:1; min-width:120px; accent-color:var(--primary); }
+        .threshold-value { font-weight:700; color:var(--primary); font-size:14px; min-width:40px; text-align:center; }
+        .exclude-common-label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); cursor:pointer; user-select:none; }
+        .exclude-common-label input[type="checkbox"] { accent-color:var(--primary); width:15px; height:15px; cursor:pointer; }
+        .similarity-results { display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto; }
+        .sim-pair { display:flex; align-items:center; gap:10px; padding:10px; background:#f8f9fa; border-radius:var(--radius-sm); border:1px solid #e8e8e8; flex-wrap:wrap; transition:var(--transition); }
+        .sim-pair:hover { background:#f0f2f5; border-color:#d0d5dd; }
+        .sim-pair .sim-thumbs { display:flex; gap:6px; flex-shrink:0; }
+        .sim-pair .sim-thumbs img { width:50px; height:50px; border-radius:var(--radius-xs); object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.1); cursor:pointer; transition:var(--transition); }
+        .sim-pair .sim-thumbs img:hover { transform:scale(1.1); }
+        .sim-pair .sim-info { flex:1; min-width:150px; }
+        .sim-pair .sim-score { font-size:13px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:4px; }
+        .sim-pair .sim-score.high { color:var(--danger); }
+        .sim-pair .sim-common-tokens { font-size:11px; color:var(--text-secondary); line-height:1.4; word-break:break-all; margin-top:2px; }
+        .sim-pair .sim-actions { display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; }
+        .sim-action-btn { background:none; border:1px solid var(--border); border-radius:var(--radius-xs); padding:4px 8px; cursor:pointer; font-size:10px; transition:var(--transition); font-family:var(--font); color:var(--text-secondary); display:flex; align-items:center; gap:3px; }
+        .sim-action-btn:hover { background:#e9ecef; }
+        .sim-action-btn.delete:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
+        .sim-action-btn.diff-btn { background:#eef1ff; color:var(--primary); border-color:#d5dcff; }
+        .sim-action-btn.diff-btn:hover { background:#dfe5ff; }
 
-        .similarity-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 250;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            backdrop-filter: blur(3px);
-        }
-        .similarity-overlay.active {
-            display: flex;
-        }
-        .similarity-panel {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            max-width: 800px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.25s ease;
-            display: flex;
-            flex-direction: column;
-        }
-        .similarity-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            background: var(--card-bg);
-            z-index: 1;
-        }
-        .similarity-header h3 {
-            font-size: 15px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .similarity-body {
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .threshold-control {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 10px 0;
-        }
-        .threshold-control label {
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .threshold-control input[type="range"] {
-            flex: 1;
-            min-width: 120px;
-            accent-color: var(--primary);
-        }
-        .threshold-value {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 14px;
-            min-width: 40px;
-            text-align: center;
-        }
-        .exclude-common-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            user-select: none;
-        }
-        .exclude-common-label input[type="checkbox"] {
-            accent-color: var(--primary);
-            width: 15px;
-            height: 15px;
-            cursor: pointer;
-        }
-        .similarity-results {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .sim-pair {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: var(--radius-sm);
-            border: 1px solid #e8e8e8;
-            flex-wrap: wrap;
-            transition: var(--transition);
-        }
-        .sim-pair:hover {
-            background: #f0f2f5;
-            border-color: #d0d5dd;
-        }
-        .sim-pair .sim-thumbs {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .sim-pair .sim-thumbs img {
-            width: 50px;
-            height: 50px;
-            border-radius: var(--radius-xs);
-            object-fit: cover;
-            border: 2px solid #fff;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .sim-pair .sim-thumbs img:hover {
-            transform: scale(1.1);
-        }
-        .sim-pair .sim-info {
-            flex: 1;
-            min-width: 150px;
-        }
-        .sim-pair .sim-score {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .sim-pair .sim-score.high {
-            color: var(--danger);
-        }
-        .sim-pair .sim-common-tokens {
-            font-size: 11px;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            word-break: break-all;
-            margin-top: 2px;
-        }
-        .sim-pair .sim-actions {
-            display: flex;
-            gap: 4px;
-            flex-shrink: 0;
-            flex-wrap: wrap;
-        }
-        .sim-action-btn {
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xs);
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 10px;
-            transition: var(--transition);
-            font-family: var(--font);
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .sim-action-btn:hover {
-            background: #e9ecef;
-        }
-        .sim-action-btn.delete:hover {
-            background: #fdf0ef;
-            color: var(--danger);
-            border-color: var(--danger);
-        }
-        .sim-action-btn.diff-btn {
-            background: #eef1ff;
-            color: var(--primary);
-            border-color: #d5dcff;
-        }
-        .sim-action-btn.diff-btn:hover {
-            background: #dfe5ff;
-        }
+        .toast-container { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:500; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast { background:#333; color:#fff; padding:10px 20px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; box-shadow:var(--shadow-lg); animation:toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards; pointer-events:auto; display:flex; align-items:center; gap:8px; }
+        .toast.success { background:var(--success); }
+        .toast.error { background:var(--danger); }
+        .toast.info { background:var(--primary); }
+        @keyframes toastIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        @keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-10px); } }
 
-        .toast-container {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 500;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            pointer-events: none;
-        }
-        .toast {
-            background: #333;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-weight: 500;
-            box-shadow: var(--shadow-lg);
-            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toast.success {
-            background: var(--success);
-        }
-        .toast.error {
-            background: var(--danger);
-        }
-        .toast.info {
-            background: var(--primary);
-        }
-        @keyframes toastIn {
-            from {
-                transform: translateY(20px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-        @keyframes toastOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-        }
+        #fileInput { display:none; }
 
-        #fileInput {
-            display: none;
-        }
+        .diff-container { display:flex; gap:16px; flex-wrap:wrap; }
+        .diff-card { flex:1 1 200px; background:#f8f9fa; padding:12px; border-radius:var(--radius-sm); border:1px solid #e8e8e8; }
+        .diff-card .diff-title { font-weight:600; font-size:13px; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .diff-token-list { display:flex; flex-wrap:wrap; gap:4px; }
+        .diff-token { font-size:11px; background:#fff; border:1px solid #d0d5dd; padding:2px 6px; border-radius:12px; color:var(--text); }
+        .diff-token.positive { border-color:#b7e4c7; background:#eef7f0; }
+        .diff-token.negative { border-color:#f5c6cb; background:#fdf0ef; }
 
-        .diff-container {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
+        @media (max-width:768px) {
+            .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; padding:10px; }
+            .app-header { padding:0 10px; height:52px; }
+            .app-header .logo span { font-size:14px; }
+            .header-btn { padding:6px 10px; font-size:11px; gap:4px; }
+            .header-btn i { font-size:12px; }
+            .filter-bar { padding:6px 10px; top:52px; }
+            .main-content { min-height:calc(100vh - 52px - 44px); }
+            .token-sidebar { width:100%; max-width:100%; }
+            .modal-content { max-height:95vh; }
+            .modal-body { padding:12px; }
+            .sim-pair { flex-direction:column; align-items:flex-start; }
+            .sim-pair .sim-thumbs img { width:40px; height:40px; }
+            .header-btn .btn-text { display:none; }
+            .header-btn { padding:7px 9px; }
+            .sim-pair .sim-actions { width:100%; justify-content:flex-end; }
         }
-        .diff-card {
-            flex: 1 1 200px;
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            border: 1px solid #e8e8e8;
-        }
-        .diff-card .diff-title {
-            font-weight: 600;
-            font-size: 13px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .diff-token-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-        .diff-token {
-            font-size: 11px;
-            background: #fff;
-            border: 1px solid #d0d5dd;
-            padding: 2px 6px;
-            border-radius: 12px;
-            color: var(--text);
-        }
-        .diff-token.positive {
-            border-color: #b7e4c7;
-            background: #eef7f0;
-        }
-        .diff-token.negative {
-            border-color: #f5c6cb;
-            background: #fdf0ef;
-        }
-
-        @media (max-width: 768px) {
-            .gallery-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 10px;
-                padding: 10px;
-            }
-            .app-header {
-                padding: 0 10px;
-                height: 52px;
-            }
-            .app-header .logo span {
-                font-size: 14px;
-            }
-            .header-btn {
-                padding: 6px 10px;
-                font-size: 11px;
-                gap: 4px;
-            }
-            .header-btn i {
-                font-size: 12px;
-            }
-            .filter-bar {
-                padding: 6px 10px;
-                top: 52px;
-            }
-            .main-content {
-                min-height: calc(100vh - 52px - 44px);
-            }
-            .token-sidebar {
-                width: 100%;
-                max-width: 100%;
-            }
-            .modal-content {
-                max-height: 95vh;
-            }
-            .modal-body {
-                padding: 12px;
-            }
-            .sim-pair {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .sim-pair .sim-thumbs img {
-                width: 40px;
-                height: 40px;
-            }
-            .header-btn .btn-text {
-                display: none;
-            }
-            .header-btn {
-                padding: 7px 9px;
-            }
-            .sim-pair .sim-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
-        }
-        @media (max-width: 480px) {
-            .gallery-grid {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-                gap: 8px;
-                padding: 8px;
-            }
-            .image-card .card-info {
-                padding: 6px 8px;
-            }
-            .image-card .card-name {
-                font-size: 11px;
-            }
-            .image-card .card-prompt-preview {
-                font-size: 10px;
-                -webkit-line-clamp: 1;
-            }
-            .card-action-btn {
-                padding: 4px 6px;
-                font-size: 10px;
-            }
-            .params-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .modal-body {
-                padding: 10px;
-                gap: 10px;
-            }
-            .prompt-text {
-                font-size: 11px;
-                max-height: 120px;
-                padding: 8px;
-            }
-            .sim-pair .sim-actions {
-                flex-wrap: wrap;
-            }
+        @media (max-width:480px) {
+            .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; padding:8px; }
+            .image-card .card-info { padding:6px 8px; }
+            .image-card .card-name { font-size:11px; }
+            .image-card .card-prompt-preview { font-size:10px; -webkit-line-clamp:1; }
+            .card-action-btn { padding:4px 6px; font-size:10px; }
+            .params-grid { grid-template-columns:repeat(2,1fr); }
+            .modal-body { padding:10px; gap:10px; }
+            .prompt-text { font-size:11px; max-height:120px; padding:8px; }
+            .sim-pair .sim-actions { flex-wrap:wrap; }
         }
     </style>
 </head>
@@ -1115,7 +259,9 @@
     </header>
 
     <div class="filter-bar" id="filterBar">
-        <span class="filter-label"><i class="fa-solid fa-filter"></i> 筛选:</span>
+        <span class="filter-label">
+            <i class="fa-solid fa-filter"></i> 筛选:
+        </span>
         <div class="filter-tags" id="filterTags"></div>
         <button class="clear-filter-btn" id="clearFilterBtn" style="display:none;">
             <i class="fa-solid fa-times"></i> 清除
@@ -1126,7 +272,7 @@
         <div class="gallery" id="gallery">
             <div class="gallery-empty" id="galleryEmpty">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
-                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>手机若无法多选，请多次点击上传</strong></p>
+                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>移动端若无法多选，请多次点击上传</strong></p>
                 <button class="upload-hint-btn" id="uploadHintBtn">
                     <i class="fa-solid fa-plus"></i> 选择图片
                 </button>
@@ -1139,7 +285,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">图片详情</h3>
-                <button class="modal-close-btn" id="modalCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close-btn" id="modalCloseBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
             <div class="modal-body" id="modalBody"></div>
         </div>
@@ -1149,7 +297,9 @@
         <div class="modal-content" style="max-width:600px;">
             <div class="modal-header">
                 <h3><i class="fa-solid fa-code-compare"></i> 提示词差异</h3>
-                <button class="modal-close-btn" id="diffModalCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close-btn" id="diffModalCloseBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
             <div class="modal-body" id="diffModalBody"></div>
         </div>
@@ -1158,15 +308,21 @@
     <div class="token-sidebar" id="tokenSidebar">
         <div class="token-sidebar-header">
             <h3><i class="fa-solid fa-book"></i> 词条库</h3>
-            <button class="token-sidebar-close" id="tokenSidebarClose"><i class="fa-solid fa-xmark"></i></button>
+            <button class="token-sidebar-close" id="tokenSidebarClose">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         <div class="token-search">
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="tokenSearchInput" placeholder="搜索词条...">
         </div>
         <div class="token-tabs">
-            <button class="token-tab active" data-tab="positive" id="tabPositive"><i class="fa-solid fa-plus-circle"></i> 正向词</button>
-            <button class="token-tab" data-tab="negative" id="tabNegative"><i class="fa-solid fa-minus-circle"></i> 负向词</button>
+            <button class="token-tab active" data-tab="positive" id="tabPositive">
+                <i class="fa-solid fa-plus-circle"></i> 正向词
+            </button>
+            <button class="token-tab" data-tab="negative" id="tabNegative">
+                <i class="fa-solid fa-minus-circle"></i> 负向词
+            </button>
         </div>
         <div class="token-list" id="tokenList"></div>
     </div>
@@ -1175,7 +331,9 @@
         <div class="similarity-panel">
             <div class="similarity-header">
                 <h3><i class="fa-solid fa-chart-simple"></i> 相似度比对</h3>
-                <button class="modal-close-btn" id="similarityCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close-btn" id="similarityCloseBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
             <div class="similarity-body">
                 <div class="threshold-control">
@@ -1194,11 +352,11 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- 关键修改：移除 accept 限制，允许文件管理器选择 -->
-    <input type="file" id="fileInput" multiple>
+    <input type="file" id="fileInput" accept="image/*" multiple>
 
     <script>
         (function() {
+            // ==================== IndexedDB ====================
             const DB_NAME = 'pngGalleryDB';
             const DB_VERSION = 1;
             const STORE_NAME = 'images';
@@ -1257,17 +415,18 @@
                 });
             }
 
+            // ==================== PNG Metadata Parser ====================
             function parsePNGMetadata(arrayBuffer) {
                 const bytes = new Uint8Array(arrayBuffer);
                 if (bytes.length < 8) return null;
-                const signature = [137, 80, 78, 71, 13, 10, 26, 10];
-                for (let i = 0; i < 8; i++) if (bytes[i] !== signature[i]) return null;
+                const signature = [137,80,78,71,13,10,26,10];
+                for (let i=0; i<8; i++) if (bytes[i] !== signature[i]) return null;
                 let offset = 8;
                 let metadata = null;
                 while (offset < bytes.length) {
                     if (offset + 8 > bytes.length) break;
-                    const length = (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
-                    const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+                    const length = (bytes[offset]<<24)|(bytes[offset+1]<<16)|(bytes[offset+2]<<8)|bytes[offset+3];
+                    const type = String.fromCharCode(bytes[offset+4],bytes[offset+5],bytes[offset+6],bytes[offset+7]);
                     const dataStart = offset + 8;
                     const dataEnd = dataStart + length;
                     if (dataEnd > bytes.length) break;
@@ -1277,26 +436,26 @@
                         let textContent = '';
                         if (type === 'tEXt') {
                             let nullIdx = -1;
-                            for (let i = 0; i < chunkData.length; i++) if (chunkData[i] === 0) { nullIdx = i; break; }
+                            for (let i=0; i<chunkData.length; i++) if (chunkData[i]===0) { nullIdx=i; break; }
                             if (nullIdx > -1) {
                                 const keywordBytes = chunkData.slice(0, nullIdx);
                                 keyword = new TextDecoder('latin1').decode(keywordBytes);
-                                const textBytes = chunkData.slice(nullIdx + 1);
+                                const textBytes = chunkData.slice(nullIdx+1);
                                 textContent = new TextDecoder('latin1').decode(textBytes);
                             }
                         } else {
                             let nullIdx1 = -1;
-                            for (let i = 0; i < chunkData.length; i++) if (chunkData[i] === 0) { nullIdx1 = i; break; }
+                            for (let i=0; i<chunkData.length; i++) if (chunkData[i]===0) { nullIdx1=i; break; }
                             if (nullIdx1 > -1) {
                                 const keywordBytes = chunkData.slice(0, nullIdx1);
                                 keyword = new TextDecoder('utf-8').decode(keywordBytes);
                                 const restIdx = nullIdx1 + 1;
                                 if (restIdx + 2 <= chunkData.length) {
                                     let nullIdx2 = -1;
-                                    for (let i = restIdx + 2; i < chunkData.length; i++) if (chunkData[i] === 0) { nullIdx2 = i; break; }
+                                    for (let i=restIdx+2; i<chunkData.length; i++) if (chunkData[i]===0) { nullIdx2=i; break; }
                                     if (nullIdx2 > -1) {
                                         let nullIdx3 = -1;
-                                        for (let i = nullIdx2 + 1; i < chunkData.length; i++) if (chunkData[i] === 0) { nullIdx3 = i; break; }
+                                        for (let i=nullIdx2+1; i<chunkData.length; i++) if (chunkData[i]===0) { nullIdx3=i; break; }
                                         const textStart = nullIdx3 > -1 ? nullIdx3 + 1 : nullIdx2 + 1;
                                         const textBytes = chunkData.slice(textStart);
                                         textContent = new TextDecoder('utf-8').decode(textBytes);
@@ -1306,9 +465,9 @@
                         }
                         if (keyword === 'Comment' || keyword === 'parameters' || keyword === 'prompt' || keyword === 'description') {
                             if (textContent && textContent.trim().startsWith('{')) {
-                                try { metadata = JSON.parse(textContent); } catch (e) {
+                                try { metadata = JSON.parse(textContent); } catch(e) {
                                     const jsonMatch = textContent.match(/\{[\s\S]*\}/);
-                                    if (jsonMatch) { try { metadata = JSON.parse(jsonMatch[0]); } catch (e2) { metadata = null; } }
+                                    if (jsonMatch) { try { metadata = JSON.parse(jsonMatch[0]); } catch(e2) { metadata = null; } }
                                 }
                             }
                             if (metadata) break;
@@ -1319,6 +478,7 @@
                 return metadata;
             }
 
+            // ==================== Token Extraction ====================
             function extractTokens(promptStr) {
                 if (!promptStr) return [];
                 let cleaned = promptStr;
@@ -1339,6 +499,7 @@
                 return Array.from(tokens);
             }
 
+            // ==================== Similarity ====================
             function jaccardSimilarity(setA, setB) {
                 if (setA.length === 0 && setB.length === 0) return 0;
                 const intersection = setA.filter(t => setB.includes(t));
@@ -1362,21 +523,27 @@
             function calculateSimilarities(images, threshold, excludeCommon) {
                 const results = [];
                 const n = images.length;
-                for (let i = 0; i < n; i++) {
-                    for (let j = i + 1; j < n; j++) {
+                for (let i=0; i<n; i++) {
+                    for (let j=i+1; j<n; j++) {
                         const tokensA = getFilteredTokens(images[i], excludeCommon, 0.5, images);
                         const tokensB = getFilteredTokens(images[j], excludeCommon, 0.5, images);
                         const sim = jaccardSimilarity(tokensA, tokensB);
                         if (sim >= threshold) {
                             const commonTokens = tokensA.filter(t => tokensB.includes(t));
-                            results.push({ imgA: images[i], imgB: images[j], similarity: sim, commonTokens: commonTokens });
+                            results.push({
+                                imgA: images[i],
+                                imgB: images[j],
+                                similarity: sim,
+                                commonTokens: commonTokens,
+                            });
                         }
                     }
                 }
-                results.sort((a, b) => b.similarity - a.similarity);
+                results.sort((a,b) => b.similarity - a.similarity);
                 return results;
             }
 
+            // ==================== App State ====================
             let allImages = [];
             let filteredImages = [];
             let activeFilters = [];
@@ -1384,6 +551,7 @@
             let tokenStats = { positive: {}, negative: {} };
             let selectedImageId = null;
 
+            // ==================== DOM Elements ====================
             const galleryGrid = document.getElementById('galleryGrid');
             const galleryEmpty = document.getElementById('galleryEmpty');
             const filterTags = document.getElementById('filterTags');
@@ -1414,16 +582,18 @@
             const diffModalCloseBtn = document.getElementById('diffModalCloseBtn');
             const diffModalBody = document.getElementById('diffModalBody');
 
-            function showToast(message, type = 'info') {
+            // ==================== Toast ====================
+            function showToast(message, type='info') {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
-                const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
-                toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i> ${message}`;
+                const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle' };
+                toast.innerHTML = `<i class="fa-solid ${icons[type]||icons.info}"></i> ${message}`;
                 toastContainer.appendChild(toast);
                 setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2600);
             }
 
-            function generateThumbnail(file, maxSize = 300) {
+            // ==================== Thumbnail Generation ====================
+            function generateThumbnail(file, maxSize=300) {
                 return new Promise((resolve, reject) => {
                     const url = URL.createObjectURL(file);
                     const img = new Image();
@@ -1432,9 +602,9 @@
                         let w = img.width;
                         let h = img.height;
                         if (w > maxSize || h > maxSize) {
-                            const ratio = Math.min(maxSize / w, maxSize / h);
-                            w = Math.round(w * ratio);
-                            h = Math.round(h * ratio);
+                            const ratio = Math.min(maxSize/w, maxSize/h);
+                            w = Math.round(w*ratio);
+                            h = Math.round(h*ratio);
                         }
                         canvas.width = w;
                         canvas.height = h;
@@ -1448,22 +618,25 @@
                 });
             }
 
+            // ==================== File Upload (改进：提示移动端多次添加) ====================
             async function handleFiles(files) {
                 const allFiles = Array.from(files);
                 if (allFiles.length === 0) return;
-                // 过滤出图片文件（PNG优先，但接受所有图片格式）
-                const imageFiles = allFiles.filter(f => f.type.startsWith('image/') || f.name.toLowerCase().match(/\.(png|jpg|jpeg|webp|gif|bmp)$/));
-                if (imageFiles.length === 0) {
-                    showToast('未选择图片文件', 'error');
+                const pngFiles = allFiles.filter(f => f.type === 'image/png' || f.name.toLowerCase().endsWith('.png'));
+                const otherImages = allFiles.filter(f => !(f.type === 'image/png' || f.name.toLowerCase().endsWith('.png')) && f.type.startsWith('image/'));
+                if (pngFiles.length === 0 && otherImages.length === 0) {
+                    showToast('请选择图片文件', 'error');
                     return;
                 }
+                // 移动端提示：如果只选择了一张，提示可以继续添加
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                if (isMobile && imageFiles.length === 1) {
-                    showToast('已添加1张，可再次点击上传继续添加', 'info');
+                if (isMobile && allFiles.length === 1) {
+                    showToast('已添加1张，您可以再次点击上传继续添加', 'info');
                 }
                 let successCount = 0;
                 let failCount = 0;
-                for (const file of imageFiles) {
+                const processFiles = [...pngFiles, ...otherImages];
+                for (const file of processFiles) {
                     try {
                         const arrayBuffer = await file.arrayBuffer();
                         const metadata = parsePNGMetadata(arrayBuffer);
@@ -1497,7 +670,7 @@
                     }
                 }
                 if (successCount > 0) {
-                    showToast(`成功导入 ${successCount} 张图片${failCount > 0 ? '，' + failCount + ' 张失败' : ''}`, successCount > 0 && failCount === 0 ? 'success' : 'info');
+                    showToast(`成功导入 ${successCount} 张图片${failCount > 0 ? '，'+failCount+' 张失败' : ''}`, successCount > 0 && failCount === 0 ? 'success' : 'info');
                     await loadAllImages();
                 }
             }
@@ -1506,10 +679,11 @@
                 return 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             }
 
+            // ==================== Load Images ====================
             async function loadAllImages() {
                 try {
                     allImages = await dbGetAllImages();
-                    allImages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    allImages.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
                     applyFilters();
                     updateTokenStats();
                     if (tokenSidebar.classList.contains('active')) renderTokenList();
@@ -1519,6 +693,7 @@
                 }
             }
 
+            // ==================== Filtering ====================
             function applyFilters() {
                 if (activeFilters.length === 0) {
                     filteredImages = [...allImages];
@@ -1565,12 +740,13 @@
                 clearFilterBtn.style.display = activeFilters.length > 0 ? 'flex' : 'none';
             }
 
+            // ==================== Gallery Rendering ====================
             function renderGallery() {
                 if (filteredImages.length === 0) {
                     galleryGrid.style.display = 'none';
                     galleryEmpty.style.display = 'flex';
                     if (allImages.length === 0) {
-                        galleryEmpty.querySelector('p').innerHTML = '上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>手机若无法多选，请多次点击上传</strong>';
+                        galleryEmpty.querySelector('p').innerHTML = '上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>移动端若无法多选，请多次点击上传</strong>';
                     } else {
                         galleryEmpty.querySelector('p').innerHTML = '没有匹配筛选条件的图片<br>尝试调整筛选词条';
                     }
@@ -1593,20 +769,36 @@
                             <div class="card-prompt-preview">${previewText}</div>
                         </div>
                         <div class="card-actions">
-                            <button class="card-action-btn copy-pos" data-id="${img.id}" title="复制正向提示词"><i class="fa-solid fa-copy"></i> 正向</button>
-                            <button class="card-action-btn copy-neg" data-id="${img.id}" title="复制负向提示词"><i class="fa-solid fa-copy"></i> 负向</button>
-                            <button class="card-action-btn delete-btn" data-id="${img.id}" title="删除"><i class="fa-solid fa-trash"></i></button>
+                            <button class="card-action-btn copy-pos" data-id="${img.id}" title="复制正向提示词">
+                                <i class="fa-solid fa-copy"></i> 正向
+                            </button>
+                            <button class="card-action-btn copy-neg" data-id="${img.id}" title="复制负向提示词">
+                                <i class="fa-solid fa-copy"></i> 负向
+                            </button>
+                            <button class="card-action-btn delete-btn" data-id="${img.id}" title="删除">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     `;
                     card.querySelector('.thumb-wrapper').addEventListener('click', () => openDetail(img.id));
                     card.querySelector('.card-info').addEventListener('click', () => openDetail(img.id));
-                    card.querySelector('.copy-pos').addEventListener('click', (e) => { e.stopPropagation(); copyText(img.prompt, '正向提示词'); });
-                    card.querySelector('.copy-neg').addEventListener('click', (e) => { e.stopPropagation(); copyText(img.negativePrompt, '负向提示词'); });
-                    card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteImage(img.id); });
+                    card.querySelector('.copy-pos').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        copyText(img.prompt, '正向提示词');
+                    });
+                    card.querySelector('.copy-neg').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        copyText(img.negativePrompt, '负向提示词');
+                    });
+                    card.querySelector('.delete-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteImage(img.id);
+                    });
                     galleryGrid.appendChild(card);
                 });
             }
 
+            // ==================== Copy ====================
             async function copyText(text, label) {
                 if (!text) { showToast(`${label}为空`, 'error'); return; }
                 try {
@@ -1623,6 +815,7 @@
                 }
             }
 
+            // ==================== Delete ====================
             async function deleteImage(id) {
                 if (!confirm('确定删除这张图片吗？此操作不可恢复。')) return;
                 try {
@@ -1642,6 +835,7 @@
                 }
             }
 
+            // ==================== Detail Modal ====================
             function openDetail(id) {
                 const img = allImages.find(i => i.id === id);
                 if (!img) return;
@@ -1656,16 +850,22 @@
                     </div>
                 `;
                 modalBody.innerHTML = `
-                    <div class="modal-image-container"><img src="${img.thumbnailDataURL}" alt="${img.name}"></div>
+                    <div class="modal-image-container">
+                        <img src="${img.thumbnailDataURL}" alt="${img.name}">
+                    </div>
                     <div class="modal-section">
                         <span class="section-label"><i class="fa-solid fa-plus-circle" style="color:var(--success);"></i> 正向提示词</span>
                         <div class="prompt-text positive">${img.prompt || '无'}</div>
-                        <div class="copy-row"><button class="copy-btn positive-btn" id="copyPosBtn"><i class="fa-solid fa-copy"></i> 复制正向提示词</button></div>
+                        <div class="copy-row">
+                            <button class="copy-btn positive-btn" id="copyPosBtn"><i class="fa-solid fa-copy"></i> 复制正向提示词</button>
+                        </div>
                     </div>
                     <div class="modal-section">
                         <span class="section-label"><i class="fa-solid fa-minus-circle" style="color:var(--danger);"></i> 负向提示词</span>
                         <div class="prompt-text negative">${img.negativePrompt || '无'}</div>
-                        <div class="copy-row"><button class="copy-btn negative-btn" id="copyNegBtn"><i class="fa-solid fa-copy"></i> 复制负向提示词</button></div>
+                        <div class="copy-row">
+                            <button class="copy-btn negative-btn" id="copyNegBtn"><i class="fa-solid fa-copy"></i> 复制负向提示词</button>
+                        </div>
                     </div>
                     <div class="modal-section">
                         <span class="section-label"><i class="fa-solid fa-gear"></i> 生成参数</span>
@@ -1673,11 +873,15 @@
                     </div>
                     <div class="modal-section">
                         <span class="section-label"><i class="fa-solid fa-tags"></i> 正向词条 (${img.promptTokens.length})</span>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">${img.promptTokens.map(t => `<span style="font-size:11px;background:#eef1ff;color:var(--primary);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                            ${img.promptTokens.map(t => `<span style="font-size:11px;background:#eef1ff;color:var(--primary);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}
+                        </div>
                     </div>
                     <div class="modal-section">
                         <span class="section-label"><i class="fa-solid fa-tags"></i> 负向词条 (${img.negativeTokens.length})</span>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">${img.negativeTokens.map(t => `<span style="font-size:11px;background:#fdf0ef;color:var(--danger);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                            ${img.negativeTokens.map(t => `<span style="font-size:11px;background:#fdf0ef;color:var(--danger);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}
+                        </div>
                     </div>
                 `;
                 document.getElementById('copyPosBtn').addEventListener('click', () => copyText(img.prompt, '正向提示词'));
@@ -1690,6 +894,7 @@
                 selectedImageId = null;
             }
 
+            // ==================== Difference Modal ====================
             function openDiffModal(imgA, imgB) {
                 const commonPos = imgA.promptTokens.filter(t => imgB.promptTokens.includes(t));
                 const commonNeg = imgA.negativeTokens.filter(t => imgB.negativeTokens.includes(t));
@@ -1697,24 +902,44 @@
                 const diffPosB = imgB.promptTokens.filter(t => !imgA.promptTokens.includes(t));
                 const diffNegA = imgA.negativeTokens.filter(t => !imgB.negativeTokens.includes(t));
                 const diffNegB = imgB.negativeTokens.filter(t => !imgA.negativeTokens.includes(t));
+
                 const renderTokenList = (tokens, type) => {
                     return tokens.map(t => `<span class="diff-token ${type}">${t}</span>`).join('') || '<span style="color:#aaa;">无</span>';
                 };
+
                 diffModalBody.innerHTML = `
                     <div class="diff-container">
                         <div class="diff-card">
                             <div class="diff-title"><i class="fa-solid fa-image"></i> ${imgA.name}</div>
-                            <div class="modal-section"><span class="section-label" style="color:var(--success);">正向独有</span><div class="diff-token-list">${renderTokenList(diffPosA, 'positive')}</div></div>
-                            <div class="modal-section"><span class="section-label" style="color:var(--danger);">负向独有</span><div class="diff-token-list">${renderTokenList(diffNegA, 'negative')}</div></div>
+                            <div class="modal-section">
+                                <span class="section-label" style="color:var(--success);">正向独有</span>
+                                <div class="diff-token-list">${renderTokenList(diffPosA, 'positive')}</div>
+                            </div>
+                            <div class="modal-section">
+                                <span class="section-label" style="color:var(--danger);">负向独有</span>
+                                <div class="diff-token-list">${renderTokenList(diffNegA, 'negative')}</div>
+                            </div>
                         </div>
                         <div class="diff-card">
                             <div class="diff-title"><i class="fa-solid fa-image"></i> ${imgB.name}</div>
-                            <div class="modal-section"><span class="section-label" style="color:var(--success);">正向独有</span><div class="diff-token-list">${renderTokenList(diffPosB, 'positive')}</div></div>
-                            <div class="modal-section"><span class="section-label" style="color:var(--danger);">负向独有</span><div class="diff-token-list">${renderTokenList(diffNegB, 'negative')}</div></div>
+                            <div class="modal-section">
+                                <span class="section-label" style="color:var(--success);">正向独有</span>
+                                <div class="diff-token-list">${renderTokenList(diffPosB, 'positive')}</div>
+                            </div>
+                            <div class="modal-section">
+                                <span class="section-label" style="color:var(--danger);">负向独有</span>
+                                <div class="diff-token-list">${renderTokenList(diffNegB, 'negative')}</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-section"><span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同正向词条</span><div class="diff-token-list">${renderTokenList(commonPos, 'positive')}</div></div>
-                    <div class="modal-section"><span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同负向词条</span><div class="diff-token-list">${renderTokenList(commonNeg, 'negative')}</div></div>
+                    <div class="modal-section">
+                        <span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同正向词条</span>
+                        <div class="diff-token-list">${renderTokenList(commonPos, 'positive')}</div>
+                    </div>
+                    <div class="modal-section">
+                        <span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同负向词条</span>
+                        <div class="diff-token-list">${renderTokenList(commonNeg, 'negative')}</div>
+                    </div>
                 `;
                 diffModal.classList.add('active');
             }
@@ -1723,6 +948,7 @@
                 diffModal.classList.remove('active');
             }
 
+            // ==================== Token Library ====================
             function updateTokenStats() {
                 tokenStats = { positive: {}, negative: {} };
                 allImages.forEach(img => {
@@ -1740,7 +966,7 @@
             function renderTokenList() {
                 const searchTerm = tokenSearchInput.value.trim().toLowerCase();
                 const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
-                const entries = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+                const entries = Object.entries(stats).sort((a,b) => b[1] - a[1]);
                 const filtered = entries.filter(([token, count]) => {
                     if (!searchTerm) return true;
                     return token.toLowerCase().includes(searchTerm);
@@ -1757,9 +983,16 @@
                     item.style.borderColor = isActive ? 'var(--primary)' : 'transparent';
                     item.style.background = isActive ? '#eef1ff' : '#f8f9fa';
                     const countClass = currentTokenTab === 'positive' ? 'pos' : 'neg';
-                    item.innerHTML = `<span class="token-name">${token}</span><span class="token-count ${countClass}">${count} 次</span>`;
+                    item.innerHTML = `
+                        <span class="token-name">${token}</span>
+                        <span class="token-count ${countClass}">${count} 次</span>
+                    `;
                     item.addEventListener('click', () => {
-                        if (isActive) { removeFilter(token); } else { addFilter(token); }
+                        if (isActive) {
+                            removeFilter(token);
+                        } else {
+                            addFilter(token);
+                        }
                         renderTokenList();
                     });
                     tokenList.appendChild(item);
@@ -1776,6 +1009,7 @@
                 tokenSidebar.classList.remove('active');
             }
 
+            // ==================== Similarity Overlay ====================
             function openSimilarity() {
                 if (allImages.length < 2) {
                     showToast('至少需要2张图片才能进行相似度比对', 'error');
@@ -1808,13 +1042,24 @@
                             <img src="${result.imgB.thumbnailDataURL}" alt="${result.imgB.name}" data-id="${result.imgB.id}" title="${result.imgB.name}">
                         </div>
                         <div class="sim-info">
-                            <div class="sim-score ${isHigh ? 'high' : ''}"><i class="fa-solid ${isHigh ? 'fa-triangle-exclamation' : 'fa-chart-line'}"></i> 相似度: ${(result.similarity * 100).toFixed(1)}%</div>
-                            <div class="sim-common-tokens">共同词条: ${result.commonTokens.slice(0, 8).join(', ')}${result.commonTokens.length > 8 ? '...' : ''}</div>
+                            <div class="sim-score ${isHigh ? 'high' : ''}">
+                                <i class="fa-solid ${isHigh ? 'fa-triangle-exclamation' : 'fa-chart-line'}"></i>
+                                相似度: ${(result.similarity * 100).toFixed(1)}%
+                            </div>
+                            <div class="sim-common-tokens">
+                                共同词条: ${result.commonTokens.slice(0, 8).join(', ')}${result.commonTokens.length > 8 ? '...' : ''}
+                            </div>
                         </div>
                         <div class="sim-actions">
-                            <button class="sim-action-btn diff-btn" data-diff="true" data-a="${result.imgA.id}" data-b="${result.imgB.id}"><i class="fa-solid fa-code-compare"></i> 差异</button>
-                            <button class="sim-action-btn delete" data-id="${result.imgA.id}" title="删除左侧图片"><i class="fa-solid fa-trash"></i> 左</button>
-                            <button class="sim-action-btn delete" data-id="${result.imgB.id}" title="删除右侧图片"><i class="fa-solid fa-trash"></i> 右</button>
+                            <button class="sim-action-btn diff-btn" data-diff="true" data-a="${result.imgA.id}" data-b="${result.imgB.id}">
+                                <i class="fa-solid fa-code-compare"></i> 差异
+                            </button>
+                            <button class="sim-action-btn delete" data-id="${result.imgA.id}" title="删除左侧图片">
+                                <i class="fa-solid fa-trash"></i> 左
+                            </button>
+                            <button class="sim-action-btn delete" data-id="${result.imgB.id}" title="删除右侧图片">
+                                <i class="fa-solid fa-trash"></i> 右
+                            </button>
                         </div>
                     `;
                     pair.querySelector('.diff-btn').addEventListener('click', (e) => {
@@ -1840,6 +1085,7 @@
                 });
             }
 
+            // ==================== Event Listeners ====================
             uploadBtn.addEventListener('click', () => fileInput.click());
             uploadHintBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => {
@@ -1859,19 +1105,37 @@
             });
 
             clearFilterBtn.addEventListener('click', clearAllFilters);
+
             modalCloseBtn.addEventListener('click', closeDetail);
             detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetail(); });
+
             diffModalCloseBtn.addEventListener('click', closeDiffModal);
             diffModal.addEventListener('click', (e) => { if (e.target === diffModal) closeDiffModal(); });
+
             tokenLibraryBtn.addEventListener('click', openTokenSidebar);
             tokenSidebarClose.addEventListener('click', closeTokenSidebar);
-            tabPositive.addEventListener('click', () => { currentTokenTab = 'positive'; tabPositive.classList.add('active'); tabNegative.classList.remove('active'); renderTokenList(); });
-            tabNegative.addEventListener('click', () => { currentTokenTab = 'negative'; tabNegative.classList.add('active'); tabPositive.classList.remove('active'); renderTokenList(); });
+
+            tabPositive.addEventListener('click', () => {
+                currentTokenTab = 'positive';
+                tabPositive.classList.add('active');
+                tabNegative.classList.remove('active');
+                renderTokenList();
+            });
+            tabNegative.addEventListener('click', () => {
+                currentTokenTab = 'negative';
+                tabNegative.classList.add('active');
+                tabPositive.classList.remove('active');
+                renderTokenList();
+            });
             tokenSearchInput.addEventListener('input', renderTokenList);
+
             similarityBtn.addEventListener('click', openSimilarity);
             similarityCloseBtn.addEventListener('click', closeSimilarity);
             similarityOverlay.addEventListener('click', (e) => { if (e.target === similarityOverlay) closeSimilarity(); });
-            thresholdSlider.addEventListener('input', () => { thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2); renderSimilarityResults(); });
+            thresholdSlider.addEventListener('input', () => {
+                thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2);
+                renderSimilarityResults();
+            });
             excludeCommonCheckbox.addEventListener('change', renderSimilarityResults);
 
             document.addEventListener('keydown', (e) => {
