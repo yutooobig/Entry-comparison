@@ -272,7 +272,7 @@
         <div class="gallery" id="gallery">
             <div class="gallery-empty" id="galleryEmpty">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
-                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>移动端若无法多选，请多次点击上传</strong></p>
+                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br></p>
                 <button class="upload-hint-btn" id="uploadHintBtn">
                     <i class="fa-solid fa-plus"></i> 选择图片
                 </button>
@@ -618,7 +618,7 @@
                 });
             }
 
-            // ==================== File Upload (改进：提示移动端多次添加) ====================
+
             async function handleFiles(files) {
                 const allFiles = Array.from(files);
                 if (allFiles.length === 0) return;
@@ -628,7 +628,7 @@
                     showToast('请选择图片文件', 'error');
                     return;
                 }
-                // 移动端提示：如果只选择了一张，提示可以继续添加
+
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                 if (isMobile && allFiles.length === 1) {
                     showToast('已添加1张，您可以再次点击上传继续添加', 'info');
@@ -746,7 +746,7 @@
                     galleryGrid.style.display = 'none';
                     galleryEmpty.style.display = 'flex';
                     if (allImages.length === 0) {
-                        galleryEmpty.querySelector('p').innerHTML = '上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br><strong>移动端若无法多选，请多次点击上传</strong>';
+                        galleryEmpty.querySelector('p').innerHTML = '上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据';
                     } else {
                         galleryEmpty.querySelector('p').innerHTML = '没有匹配筛选条件的图片<br>尝试调整筛选词条';
                     }
