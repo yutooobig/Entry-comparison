@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PNG 提示词管理器</title>
+    <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -20,17 +20,16 @@
             --text: #2c3e50;
             --text-secondary: #7f8c8d;
             --border: #e1e5eb;
-            --shadow: 0 2px 12px rgba(0,0,0,0.08);
-            --shadow-lg: 0 8px 30px rgba(0,0,0,0.15);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
             --radius: 12px;
             --radius-sm: 8px;
             --radius-xs: 5px;
-            --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
             --header-height: 60px;
             --filter-height: 48px;
         }
-
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: var(--font);
@@ -65,6 +64,8 @@
         .header-btn i { font-size:14px; }
         .header-btn.primary { background:var(--primary); border-color:var(--primary); }
         .header-btn.primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+        .header-btn.danger { background:var(--danger); border-color:var(--danger); }
+        .header-btn.danger:hover { background:var(--danger-hover); border-color:var(--danger-hover); }
 
         .filter-bar {
             position: sticky; top:var(--header-height); z-index:90;
@@ -83,6 +84,12 @@
         .filter-tag i:hover { opacity:1; }
         .clear-filter-btn { background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--radius-xs); transition:var(--transition); font-family:var(--font); }
         .clear-filter-btn:hover { color:var(--danger); background:#fef0ef; }
+        .download-actions { display:none; gap:6px; align-items:center; flex-wrap:wrap; }
+        .download-actions.active { display:flex; }
+        .download-actions .btn-sm { padding:5px 10px; font-size:11px; border-radius:6px; border:1px solid var(--border); background:#f8f9fa; cursor:pointer; transition:var(--transition); font-family:var(--font); color:var(--text); display:flex; align-items:center; gap:4px; }
+        .download-actions .btn-sm:hover { background:#e9ecef; }
+        .download-actions .btn-sm.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .download-actions .btn-sm.primary:hover { background:var(--primary-hover); }
 
         .main-content { display:flex; min-height:calc(100vh - var(--header-height) - var(--filter-height)); }
         .gallery { flex:1; padding:16px; overflow-y:auto; }
@@ -95,10 +102,12 @@
 
         .image-card { background:var(--card-bg); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); transition:var(--transition); cursor:pointer; position:relative; border:2px solid transparent; display:flex; flex-direction:column; }
         .image-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
-        .image-card.selected { border-color:var(--primary); }
+        .image-card.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(74,108,247,0.2); }
         .image-card .thumb-wrapper { position:relative; width:100%; aspect-ratio:1/1; overflow:hidden; background:#f0f0f0; flex-shrink:0; }
         .image-card .thumb-wrapper img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.3s ease; }
         .image-card:hover .thumb-wrapper img { transform:scale(1.04); }
+        .image-card .select-checkbox { position:absolute; top:8px; left:8px; width:20px; height:20px; accent-color:var(--primary); cursor:pointer; z-index:5; display:none; }
+        .image-card .select-checkbox.show { display:block; }
         .image-card .card-info { padding:10px 12px; flex:1; display:flex; flex-direction:column; gap:4px; }
         .image-card .card-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .image-card .card-prompt-preview { font-size:11px; color:var(--text-secondary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
@@ -149,10 +158,17 @@
         .token-list { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
         .token-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f8f9fa; border-radius:var(--radius-sm); cursor:pointer; transition:var(--transition); border:1px solid transparent; gap:8px; }
         .token-item:hover { background:#eef1ff; border-color:#d5dcff; }
-        .token-item .token-name { font-size:12px; font-weight:500; word-break:break-all; flex:1; line-height:1.3; }
+        .token-item .token-name { font-size:12px; font-weight:500; word-break:break-all; flex:1; line-height:1.3; cursor:pointer; }
         .token-item .token-count { font-size:11px; color:var(--text-secondary); background:#e9ecef; padding:2px 8px; border-radius:10px; font-weight:600; flex-shrink:0; }
         .token-item .token-count.pos { background:#d4edda; color:#155724; }
         .token-item .token-count.neg { background:#f8d7da; color:#721c24; }
+        .token-item .filter-token-btn { background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:12px; padding:4px; border-radius:4px; transition:var(--transition); flex-shrink:0; }
+        .token-item .filter-token-btn:hover { color:var(--primary); background:#e0e5ff; }
+
+        .token-weight-bar { padding:8px 16px; border-bottom:1px solid var(--border); background:#fcfcfc; flex-shrink:0; }
+        .token-weight-bar .weight-capsule { display:inline-flex; align-items:center; gap:4px; background:#f0f2f5; border-radius:20px; padding:6px 12px; font-size:13px; font-weight:500; border:1px solid #d0d5dd; cursor:pointer; transition:var(--transition); }
+        .token-weight-bar .weight-capsule:hover { background:#e0e5ff; border-color:var(--primary); }
+        .token-weight-bar .weight-capsule .weight-count { background:var(--primary); color:#fff; border-radius:10px; padding:2px 6px; font-size:10px; font-weight:700; }
         .token-search { padding:10px 16px; flex-shrink:0; position:relative; }
         .token-search input { width:100%; padding:8px 12px 8px 36px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; font-family:var(--font); outline:none; transition:var(--transition); background:#f8f9fa; }
         .token-search input:focus { border-color:var(--primary); background:#fff; box-shadow:0 0 0 3px rgba(74,108,247,0.1); }
@@ -186,6 +202,8 @@
         .sim-action-btn.delete:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
         .sim-action-btn.diff-btn { background:#eef1ff; color:var(--primary); border-color:#d5dcff; }
         .sim-action-btn.diff-btn:hover { background:#dfe5ff; }
+        .sim-action-btn.weight-diff-btn { background:#fff8e1; color:#b7791f; border-color:#f0d77b; }
+        .sim-action-btn.weight-diff-btn:hover { background:#fff3cd; }
 
         .toast-container { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:500; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
         .toast { background:#333; color:#fff; padding:10px 20px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; box-shadow:var(--shadow-lg); animation:toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards; pointer-events:auto; display:flex; align-items:center; gap:8px; }
@@ -205,6 +223,11 @@
         .diff-token.positive { border-color:#b7e4c7; background:#eef7f0; }
         .diff-token.negative { border-color:#f5c6cb; background:#fdf0ef; }
 
+        .weight-diff-list { display:flex; flex-direction:column; gap:8px; }
+        .weight-diff-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#f8f9fa; border-radius:var(--radius-sm); border:1px solid #e8e8e8; flex-wrap:wrap; gap:8px; }
+        .weight-diff-row .diff-token-name { font-weight:600; font-size:13px; flex:1; }
+        .weight-diff-row .diff-weight { font-size:12px; color:var(--text-secondary); }
+
         @media (max-width:768px) {
             .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; padding:10px; }
             .app-header { padding:0 10px; height:52px; }
@@ -221,6 +244,7 @@
             .header-btn .btn-text { display:none; }
             .header-btn { padding:7px 9px; }
             .sim-pair .sim-actions { width:100%; justify-content:flex-end; }
+            .download-actions { width:100%; }
         }
         @media (max-width:480px) {
             .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; padding:8px; }
@@ -236,46 +260,36 @@
     </style>
 </head>
 <body>
-
     <header class="app-header">
-        <div class="logo">
-            <i class="fa-solid fa-images"></i>
-            <span>PNG 提示词管理器</span>
-        </div>
+        <div class="logo"><i class="fa-solid fa-images"></i><span>PNG 提示词管理器</span></div>
         <div class="header-actions">
-            <button class="header-btn primary" id="uploadBtn" title="上传PNG文件">
-                <i class="fa-solid fa-upload"></i>
-                <span class="btn-text">上传图片</span>
-            </button>
-            <button class="header-btn" id="tokenLibraryBtn" title="词条库">
-                <i class="fa-solid fa-book"></i>
-                <span class="btn-text">词条库</span>
-            </button>
-            <button class="header-btn" id="similarityBtn" title="相似度比对">
-                <i class="fa-solid fa-chart-simple"></i>
-                <span class="btn-text">相似度</span>
-            </button>
+            <button class="header-btn primary" id="uploadBtn"><i class="fa-solid fa-upload"></i><span class="btn-text">上传图片</span></button>
+            <button class="header-btn" id="downloadModeBtn"><i class="fa-solid fa-download"></i><span class="btn-text">多选下载</span></button>
+            <button class="header-btn" id="compressBtn"><i class="fa-solid fa-compress"></i><span class="btn-text">压缩图片</span></button>
+            <button class="header-btn" id="deleteDuplicatesBtn"><i class="fa-solid fa-copy"></i><span class="btn-text">删除重复</span></button>
+            <button class="header-btn" id="tokenLibraryBtn"><i class="fa-solid fa-book"></i><span class="btn-text">词条库</span></button>
+            <button class="header-btn" id="similarityBtn"><i class="fa-solid fa-chart-simple"></i><span class="btn-text">相似度</span></button>
         </div>
     </header>
 
     <div class="filter-bar" id="filterBar">
-        <span class="filter-label">
-            <i class="fa-solid fa-filter"></i> 筛选:
-        </span>
+        <span class="filter-label"><i class="fa-solid fa-filter"></i> 筛选:</span>
         <div class="filter-tags" id="filterTags"></div>
-        <button class="clear-filter-btn" id="clearFilterBtn" style="display:none;">
-            <i class="fa-solid fa-times"></i> 清除
-        </button>
+        <button class="clear-filter-btn" id="clearFilterBtn" style="display:none;"><i class="fa-solid fa-times"></i> 清除</button>
+        <div class="download-actions" id="downloadActions">
+            <button class="btn-sm" id="selectAllBtn"><i class="fa-solid fa-check-double"></i> 全选</button>
+            <button class="btn-sm" id="deselectAllBtn"><i class="fa-solid fa-square"></i> 取消全选</button>
+            <button class="btn-sm primary" id="downloadWithMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 含元数据下载</button>
+            <button class="btn-sm primary" id="downloadNoMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 不含元数据下载</button>
+        </div>
     </div>
 
     <div class="main-content">
         <div class="gallery" id="gallery">
             <div class="gallery-empty" id="galleryEmpty">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
-                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据<br></p>
-                <button class="upload-hint-btn" id="uploadHintBtn">
-                    <i class="fa-solid fa-plus"></i> 选择图片
-                </button>
+                <p>上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据</p>
+                <button class="upload-hint-btn" id="uploadHintBtn"><i class="fa-solid fa-plus"></i> 选择图片</button>
             </div>
             <div class="gallery-grid" id="galleryGrid" style="display:none;"></div>
         </div>
@@ -283,67 +297,45 @@
 
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">图片详情</h3>
-                <button class="modal-close-btn" id="modalCloseBtn">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
+            <div class="modal-header"><h3 id="modalTitle">图片详情</h3><button class="modal-close-btn" id="modalCloseBtn"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
     <div class="modal-overlay" id="diffModal">
         <div class="modal-content" style="max-width:600px;">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-code-compare"></i> 提示词差异</h3>
-                <button class="modal-close-btn" id="diffModalCloseBtn">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
+            <div class="modal-header"><h3><i class="fa-solid fa-code-compare"></i> 提示词差异</h3><button class="modal-close-btn" id="diffModalCloseBtn"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="modal-body" id="diffModalBody"></div>
         </div>
     </div>
 
+    <div class="modal-overlay" id="weightDiffModal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-weight-scale"></i> 权重差异</h3><button class="modal-close-btn" id="weightDiffCloseBtn"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="modal-body" id="weightDiffBody"></div>
+        </div>
+    </div>
+
     <div class="token-sidebar" id="tokenSidebar">
-        <div class="token-sidebar-header">
-            <h3><i class="fa-solid fa-book"></i> 词条库</h3>
-            <button class="token-sidebar-close" id="tokenSidebarClose">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="token-search">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="tokenSearchInput" placeholder="搜索词条...">
-        </div>
+        <div class="token-sidebar-header"><h3><i class="fa-solid fa-book"></i> 词条库</h3><button class="token-sidebar-close" id="tokenSidebarClose"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="token-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="tokenSearchInput" placeholder="搜索词条..."></div>
         <div class="token-tabs">
-            <button class="token-tab active" data-tab="positive" id="tabPositive">
-                <i class="fa-solid fa-plus-circle"></i> 正向词
-            </button>
-            <button class="token-tab" data-tab="negative" id="tabNegative">
-                <i class="fa-solid fa-minus-circle"></i> 负向词
-            </button>
+            <button class="token-tab active" data-tab="positive" id="tabPositive"><i class="fa-solid fa-plus-circle"></i> 正向词</button>
+            <button class="token-tab" data-tab="negative" id="tabNegative"><i class="fa-solid fa-minus-circle"></i> 负向词</button>
         </div>
+        <div class="token-weight-bar" id="tokenWeightBar" style="display:none;"></div>
         <div class="token-list" id="tokenList"></div>
     </div>
 
     <div class="similarity-overlay" id="similarityOverlay">
         <div class="similarity-panel">
-            <div class="similarity-header">
-                <h3><i class="fa-solid fa-chart-simple"></i> 相似度比对</h3>
-                <button class="modal-close-btn" id="similarityCloseBtn">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
+            <div class="similarity-header"><h3><i class="fa-solid fa-chart-simple"></i> 相似度比对</h3><button class="modal-close-btn" id="similarityCloseBtn"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="similarity-body">
                 <div class="threshold-control">
                     <label><i class="fa-solid fa-sliders"></i> 阈值:</label>
                     <input type="range" id="thresholdSlider" min="0.1" max="0.9" step="0.05" value="0.4">
                     <span class="threshold-value" id="thresholdValue">0.40</span>
-                    <label class="exclude-common-label">
-                        <input type="checkbox" id="excludeCommonCheckbox" checked>
-                        排除高频词条(>50%图片)
-                    </label>
+                    <label class="exclude-common-label"><input type="checkbox" id="excludeCommonCheckbox" checked> 排除高频词条(>50%图片)</label>
                 </div>
                 <div class="similarity-results" id="similarityResults"></div>
             </div>
@@ -351,12 +343,10 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
-
     <input type="file" id="fileInput" accept="image/*" multiple>
 
     <script>
         (function() {
-            // ==================== IndexedDB ====================
             const DB_NAME = 'pngGalleryDB';
             const DB_VERSION = 1;
             const STORE_NAME = 'images';
@@ -415,7 +405,6 @@
                 });
             }
 
-            // ==================== PNG Metadata Parser ====================
             function parsePNGMetadata(arrayBuffer) {
                 const bytes = new Uint8Array(arrayBuffer);
                 if (bytes.length < 8) return null;
@@ -478,9 +467,8 @@
                 return metadata;
             }
 
-            // ==================== Token Extraction ====================
-            function extractTokens(promptStr) {
-                if (!promptStr) return [];
+            function extractTokenData(promptStr) {
+                if (!promptStr) return { tokens: [], weights: {} };
                 let cleaned = promptStr;
                 cleaned = cleaned.replace(/\{\{tar\}\}/g, '');
                 cleaned = cleaned.replace(/\d+(?:\.\d+)?\s*::/g, ',');
@@ -488,18 +476,33 @@
                 cleaned = cleaned.replace(/::/g, ',');
                 const parts = cleaned.split(',');
                 const tokens = new Set();
+                const weights = {};
                 for (let part of parts) {
-                    let token = part.trim();
-                    if (!token) continue;
-                    token = token.replace(/^[\d\s.]+/, '').trim();
-                    if (!token) continue;
-                    token = token.replace(/\s+/g, ' ');
-                    if (token.length > 0 && token.length < 200) tokens.add(token);
+                    let segment = part.trim();
+                    if (!segment) continue;
+                    let weight = 1.0;
+                    let tokenPart = segment;
+                    const weightMatch = segment.match(/(.+?):\s*(-?\d+(?:\.\d+)?)\s*$/);
+                    if (weightMatch) {
+                        tokenPart = weightMatch[1];
+                        weight = parseFloat(weightMatch[2]);
+                        if (isNaN(weight)) weight = 1.0;
+                    }
+                    tokenPart = tokenPart.trim();
+                    tokenPart = tokenPart.replace(/[\(\)\[\]<>]/g, '');
+                    tokenPart = tokenPart.replace(/\s+/g, ' ').trim();
+                    tokenPart = tokenPart.replace(/^[\d\s.]+/, '').trim();
+                    if (!tokenPart || tokenPart.length < 1 || tokenPart.length >= 200) continue;
+                    tokens.add(tokenPart);
+                    weights[tokenPart] = weight;
                 }
-                return Array.from(tokens);
+                return { tokens: Array.from(tokens), weights };
             }
 
-            // ==================== Similarity ====================
+            function extractTokens(promptStr) {
+                return extractTokenData(promptStr).tokens;
+            }
+
             function jaccardSimilarity(setA, setB) {
                 if (setA.length === 0 && setB.length === 0) return 0;
                 const intersection = setA.filter(t => setB.includes(t));
@@ -530,12 +533,7 @@
                         const sim = jaccardSimilarity(tokensA, tokensB);
                         if (sim >= threshold) {
                             const commonTokens = tokensA.filter(t => tokensB.includes(t));
-                            results.push({
-                                imgA: images[i],
-                                imgB: images[j],
-                                similarity: sim,
-                                commonTokens: commonTokens,
-                            });
+                            results.push({ imgA: images[i], imgB: images[j], similarity: sim, commonTokens: commonTokens });
                         }
                     }
                 }
@@ -543,15 +541,93 @@
                 return results;
             }
 
-            // ==================== App State ====================
+            const crcTable = (() => { let c; const table = []; for (let n=0; n<256; n++) { c = n; for (let k=0; k<8; k++) { c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); } table[n] = c >>> 0; } return table; })();
+            function crc32(bytes) { let crc = 0xFFFFFFFF; for (let i=0; i<bytes.length; i++) { crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF]; } return (crc ^ 0xFFFFFFFF) >>> 0; }
+            function uint32ToBytes(num) { return [num >>> 24, (num >>> 16) & 0xFF, (num >>> 8) & 0xFF, num & 0xFF]; }
+            function createPNGChunk(type, data) {
+                const typeBytes = [...type].map(c => c.charCodeAt(0));
+                const dataBytes = data instanceof Uint8Array ? data : new TextEncoder().encode(data);
+                const length = dataBytes.length;
+                const chunk = new Uint8Array(4 + 4 + length + 4);
+                chunk.set(uint32ToBytes(length), 0);
+                chunk.set(typeBytes, 4);
+                chunk.set(dataBytes, 8);
+                const crc = crc32(new Uint8Array([...typeBytes, ...dataBytes]));
+                chunk.set(uint32ToBytes(crc), 8 + length);
+                return chunk;
+            }
+
+            function removePNGMetadata(blob) {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const bytes = new Uint8Array(arrayBuffer);
+                        if (bytes.length < 8) { resolve(blob); return; }
+                        const signature = [137,80,78,71,13,10,26,10];
+                        for (let i=0; i<8; i++) if (bytes[i] !== signature[i]) { resolve(blob); return; }
+                        const chunks = [];
+                        let offset = 8;
+                        while (offset < bytes.length) {
+                            if (offset + 8 > bytes.length) break;
+                            const length = (bytes[offset]<<24)|(bytes[offset+1]<<16)|(bytes[offset+2]<<8)|bytes[offset+3];
+                            const type = String.fromCharCode(bytes[offset+4],bytes[offset+5],bytes[offset+6],bytes[offset+7]);
+                            const dataStart = offset + 8;
+                            const dataEnd = dataStart + length;
+                            if (dataEnd + 4 > bytes.length) break;
+                            if (type !== 'tEXt' && type !== 'iTXt' && type !== 'zTXt') {
+                                chunks.push(bytes.slice(offset, dataEnd + 4));
+                            }
+                            offset = dataEnd + 4;
+                        }
+                        const signatureBytes = bytes.slice(0, 8);
+                        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0) + 8;
+                        const result = new Uint8Array(totalLength);
+                        result.set(signatureBytes, 0);
+                        let pos = 8;
+                        for (const chunk of chunks) { result.set(chunk, pos); pos += chunk.length; }
+                        resolve(new Blob([result], { type: 'image/png' }));
+                    } catch (e) { reject(e); }
+                });
+            }
+
+            function createPNGWithMetadata(pngBlob, metadataObj) {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const arrayBuffer = await pngBlob.arrayBuffer();
+                        const bytes = new Uint8Array(arrayBuffer);
+                        const sig = [137,80,78,71,13,10,26,10];
+                        for (let i=0; i<8; i++) if (bytes[i] !== sig[i]) { resolve(pngBlob); return; }
+                        let iendOffset = -1;
+                        for (let i = bytes.length - 8; i >= 8; i--) {
+                            const type = String.fromCharCode(bytes[i+4], bytes[i+5], bytes[i+6], bytes[i+7]);
+                            if (type === 'IEND') { iendOffset = i; break; }
+                        }
+                        if (iendOffset === -1) { resolve(pngBlob); return; }
+                        const metadataStr = JSON.stringify(metadataObj);
+                        const keyword = 'Comment';
+                        const textBytes = new TextEncoder().encode(keyword + '\0' + metadataStr);
+                        const textChunk = createPNGChunk('tEXt', textBytes);
+                        const before = bytes.slice(0, iendOffset);
+                        const iendChunk = bytes.slice(iendOffset);
+                        const result = new Uint8Array(before.length + textChunk.length + iendChunk.length);
+                        result.set(before, 0);
+                        result.set(textChunk, before.length);
+                        result.set(iendChunk, before.length + textChunk.length);
+                        resolve(new Blob([result], { type: 'image/png' }));
+                    } catch (e) { reject(e); }
+                });
+            }
+
             let allImages = [];
             let filteredImages = [];
-            let activeFilters = [];
+            let activeFilters = []; // 元素: { token, weight?, type? }
             let currentTokenTab = 'positive';
             let tokenStats = { positive: {}, negative: {} };
             let selectedImageId = null;
+            let selectionMode = false;
+            let selectedIds = new Set();
+            let currentTokenDetail = null; // { token, type }
 
-            // ==================== DOM Elements ====================
             const galleryGrid = document.getElementById('galleryGrid');
             const galleryEmpty = document.getElementById('galleryEmpty');
             const filterTags = document.getElementById('filterTags');
@@ -561,12 +637,21 @@
             const uploadHintBtn = document.getElementById('uploadHintBtn');
             const tokenLibraryBtn = document.getElementById('tokenLibraryBtn');
             const similarityBtn = document.getElementById('similarityBtn');
+            const downloadModeBtn = document.getElementById('downloadModeBtn');
+            const compressBtn = document.getElementById('compressBtn');
+            const deleteDuplicatesBtn = document.getElementById('deleteDuplicatesBtn');
+            const downloadActions = document.getElementById('downloadActions');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const deselectAllBtn = document.getElementById('deselectAllBtn');
+            const downloadWithMetaBtn = document.getElementById('downloadWithMetaBtn');
+            const downloadNoMetaBtn = document.getElementById('downloadNoMetaBtn');
             const tokenSidebar = document.getElementById('tokenSidebar');
             const tokenSidebarClose = document.getElementById('tokenSidebarClose');
             const tokenList = document.getElementById('tokenList');
             const tokenSearchInput = document.getElementById('tokenSearchInput');
             const tabPositive = document.getElementById('tabPositive');
             const tabNegative = document.getElementById('tabNegative');
+            const tokenWeightBar = document.getElementById('tokenWeightBar');
             const detailModal = document.getElementById('detailModal');
             const modalCloseBtn = document.getElementById('modalCloseBtn');
             const modalTitle = document.getElementById('modalTitle');
@@ -581,21 +666,22 @@
             const diffModal = document.getElementById('diffModal');
             const diffModalCloseBtn = document.getElementById('diffModalCloseBtn');
             const diffModalBody = document.getElementById('diffModalBody');
+            const weightDiffModal = document.getElementById('weightDiffModal');
+            const weightDiffCloseBtn = document.getElementById('weightDiffCloseBtn');
+            const weightDiffBody = document.getElementById('weightDiffBody');
 
-            // ==================== Toast ====================
-            function showToast(message, type='info') {
+            function showToast(message, type = 'info') {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
                 const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle' };
-                toast.innerHTML = `<i class="fa-solid ${icons[type]||icons.info}"></i> ${message}`;
+                toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i> ${message}`;
                 toastContainer.appendChild(toast);
                 setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2600);
             }
 
-            // ==================== Thumbnail Generation ====================
-            function generateThumbnail(file, maxSize=300) {
+            function generateThumbnailFromBlob(blob, maxSize = 300) {
                 return new Promise((resolve, reject) => {
-                    const url = URL.createObjectURL(file);
+                    const url = URL.createObjectURL(blob);
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
@@ -618,21 +704,12 @@
                 });
             }
 
-
             async function handleFiles(files) {
                 const allFiles = Array.from(files);
                 if (allFiles.length === 0) return;
                 const pngFiles = allFiles.filter(f => f.type === 'image/png' || f.name.toLowerCase().endsWith('.png'));
                 const otherImages = allFiles.filter(f => !(f.type === 'image/png' || f.name.toLowerCase().endsWith('.png')) && f.type.startsWith('image/'));
-                if (pngFiles.length === 0 && otherImages.length === 0) {
-                    showToast('请选择图片文件', 'error');
-                    return;
-                }
-
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                if (isMobile && allFiles.length === 1) {
-                    showToast('已添加1张，您可以再次点击上传继续添加', 'info');
-                }
+                if (pngFiles.length === 0 && otherImages.length === 0) { showToast('请选择图片文件', 'error'); return; }
                 let successCount = 0;
                 let failCount = 0;
                 const processFiles = [...pngFiles, ...otherImages];
@@ -642,30 +719,34 @@
                         const metadata = parsePNGMetadata(arrayBuffer);
                         if (!metadata || !metadata.prompt) {
                             failCount++;
-                            showToast(`"${file.name}" 未找到有效元数据（可能不是PNG或缺少提示词）`, 'error');
+                            showToast(`"${file.name}" 未找到有效元数据`, 'error');
                             continue;
                         }
-                        const thumbnailDataURL = await generateThumbnail(file);
+                        const thumbnailDataURL = await generateThumbnailFromBlob(file);
+                        const promptData = extractTokenData(metadata.prompt);
+                        const negativeData = extractTokenData(metadata.uc || '');
                         const imageData = {
                             id: generateId(),
                             name: file.name,
                             fileBlob: file,
-                            thumbnailDataURL: thumbnailDataURL,
+                            thumbnailDataURL,
                             prompt: metadata.prompt || '',
                             negativePrompt: metadata.uc || '',
                             seed: metadata.seed !== undefined ? metadata.seed : null,
                             steps: metadata.steps !== undefined ? metadata.steps : null,
                             sampler: metadata.sampler || '',
                             scale: metadata.scale !== undefined ? metadata.scale : null,
-                            promptTokens: extractTokens(metadata.prompt),
-                            negativeTokens: extractTokens(metadata.uc || ''),
+                            promptTokens: promptData.tokens,
+                            negativeTokens: negativeData.tokens,
+                            promptWeights: promptData.weights,
+                            negativeWeights: negativeData.weights,
                             timestamp: Date.now(),
                         };
                         await dbAddImage(imageData);
                         successCount++;
                     } catch (err) {
                         failCount++;
-                        console.error('Upload error:', err);
+                        console.error(err);
                         showToast(`"${file.name}" 处理失败: ${err.message}`, 'error');
                     }
                 }
@@ -675,11 +756,8 @@
                 }
             }
 
-            function generateId() {
-                return 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            }
+            function generateId() { return 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
 
-            // ==================== Load Images ====================
             async function loadAllImages() {
                 try {
                     allImages = await dbGetAllImages();
@@ -687,35 +765,64 @@
                     applyFilters();
                     updateTokenStats();
                     if (tokenSidebar.classList.contains('active')) renderTokenList();
-                } catch (err) {
-                    console.error('Load images error:', err);
-                    showToast('加载图片失败', 'error');
-                }
+                } catch (err) { console.error(err); showToast('加载图片失败', 'error'); }
             }
 
-            // ==================== Filtering ====================
             function applyFilters() {
                 if (activeFilters.length === 0) {
                     filteredImages = [...allImages];
                 } else {
                     filteredImages = allImages.filter(img => {
-                        const allTokens = [...img.promptTokens, ...img.negativeTokens];
-                        return activeFilters.every(filter => allTokens.includes(filter));
+                        return activeFilters.every(filter => {
+                            const { token, weight, type } = filter;
+                            if (type === 'positive') {
+                                if (!img.promptTokens.includes(token)) return false;
+                                if (weight !== undefined) {
+                                    const actualWeight = img.promptWeights && img.promptWeights[token] !== undefined ? img.promptWeights[token] : 1.0;
+                                    return Math.abs(actualWeight - weight) < 0.001;
+                                }
+                                return true;
+                            } else if (type === 'negative') {
+                                if (!img.negativeTokens.includes(token)) return false;
+                                if (weight !== undefined) {
+                                    const actualWeight = img.negativeWeights && img.negativeWeights[token] !== undefined ? img.negativeWeights[token] : 1.0;
+                                    return Math.abs(actualWeight - weight) < 0.001;
+                                }
+                                return true;
+                            } else {
+                                if (img.promptTokens.includes(token) || img.negativeTokens.includes(token)) {
+                                    if (weight !== undefined) {
+                                        let matched = false;
+                                        if (img.promptTokens.includes(token)) {
+                                            const w = img.promptWeights?.[token] ?? 1.0;
+                                            if (Math.abs(w - weight) < 0.001) matched = true;
+                                        }
+                                        if (!matched && img.negativeTokens.includes(token)) {
+                                            const w = img.negativeWeights?.[token] ?? 1.0;
+                                            if (Math.abs(w - weight) < 0.001) matched = true;
+                                        }
+                                        return matched;
+                                    }
+                                    return true;
+                                }
+                                return false;
+                            }
+                        });
                     });
                 }
                 renderGallery();
                 renderFilterTags();
             }
 
-            function addFilter(token) {
-                if (!activeFilters.includes(token)) {
-                    activeFilters.push(token);
+            function addFilter(filterObj) {
+                if (!activeFilters.some(f => f.token === filterObj.token && f.weight === filterObj.weight && f.type === filterObj.type)) {
+                    activeFilters.push(filterObj);
                     applyFilters();
                 }
             }
 
-            function removeFilter(token) {
-                activeFilters = activeFilters.filter(t => t !== token);
+            function removeFilter(filterObj) {
+                activeFilters = activeFilters.filter(f => !(f.token === filterObj.token && f.weight === filterObj.weight && f.type === filterObj.type));
                 applyFilters();
             }
 
@@ -726,30 +833,25 @@
 
             function renderFilterTags() {
                 filterTags.innerHTML = '';
-                activeFilters.forEach(token => {
+                activeFilters.forEach(filter => {
                     const tag = document.createElement('span');
                     tag.className = 'filter-tag';
-                    tag.innerHTML = `${token} <i class="fa-solid fa-times" data-token="${token}"></i>`;
-                    tag.querySelector('i').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        removeFilter(token);
-                    });
-                    tag.addEventListener('click', () => removeFilter(token));
+                    let label = filter.token;
+                    if (filter.weight !== undefined) label += ` (权重:${filter.weight})`;
+                    if (filter.type) label += ` [${filter.type === 'positive' ? '正' : '负'}]`;
+                    tag.innerHTML = `${label} <i class="fa-solid fa-times"></i>`;
+                    tag.querySelector('i').addEventListener('click', (e) => { e.stopPropagation(); removeFilter(filter); });
+                    tag.addEventListener('click', () => removeFilter(filter));
                     filterTags.appendChild(tag);
                 });
                 clearFilterBtn.style.display = activeFilters.length > 0 ? 'flex' : 'none';
             }
 
-            // ==================== Gallery Rendering ====================
             function renderGallery() {
                 if (filteredImages.length === 0) {
                     galleryGrid.style.display = 'none';
                     galleryEmpty.style.display = 'flex';
-                    if (allImages.length === 0) {
-                        galleryEmpty.querySelector('p').innerHTML = '上传PNG图片以开始管理提示词<br>支持批量上传，自动解析元数据';
-                    } else {
-                        galleryEmpty.querySelector('p').innerHTML = '没有匹配筛选条件的图片<br>尝试调整筛选词条';
-                    }
+                    galleryEmpty.querySelector('p').innerHTML = allImages.length === 0 ? '上传PNG图片以开始管理提示词' : '没有匹配筛选条件的图片';
                     return;
                 }
                 galleryEmpty.style.display = 'none';
@@ -759,142 +861,93 @@
                     const card = document.createElement('div');
                     card.className = 'image-card';
                     card.dataset.id = img.id;
+                    if (selectedIds.has(img.id)) card.classList.add('selected');
                     const previewText = img.prompt ? img.prompt.substring(0, 80) : '无提示词';
                     card.innerHTML = `
                         <div class="thumb-wrapper">
                             <img src="${img.thumbnailDataURL}" alt="${img.name}" loading="lazy">
+                            <input type="checkbox" class="select-checkbox ${selectionMode ? 'show' : ''}" data-id="${img.id}" ${selectedIds.has(img.id) ? 'checked' : ''}>
                         </div>
                         <div class="card-info">
                             <div class="card-name" title="${img.name}">${img.name}</div>
                             <div class="card-prompt-preview">${previewText}</div>
                         </div>
                         <div class="card-actions">
-                            <button class="card-action-btn copy-pos" data-id="${img.id}" title="复制正向提示词">
-                                <i class="fa-solid fa-copy"></i> 正向
-                            </button>
-                            <button class="card-action-btn copy-neg" data-id="${img.id}" title="复制负向提示词">
-                                <i class="fa-solid fa-copy"></i> 负向
-                            </button>
-                            <button class="card-action-btn delete-btn" data-id="${img.id}" title="删除">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <button class="card-action-btn copy-pos" data-id="${img.id}"><i class="fa-solid fa-copy"></i> 正向</button>
+                            <button class="card-action-btn copy-neg" data-id="${img.id}"><i class="fa-solid fa-copy"></i> 负向</button>
+                            <button class="card-action-btn delete-btn" data-id="${img.id}"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     `;
-                    card.querySelector('.thumb-wrapper').addEventListener('click', () => openDetail(img.id));
+                    const checkbox = card.querySelector('.select-checkbox');
+                    checkbox.addEventListener('change', (e) => {
+                        e.stopPropagation();
+                        const id = e.target.dataset.id;
+                        if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+                        card.classList.toggle('selected', e.target.checked);
+                    });
+                    card.querySelector('.thumb-wrapper').addEventListener('click', (e) => {
+                        if (selectionMode && e.target.tagName !== 'INPUT') {
+                            const cb = card.querySelector('.select-checkbox');
+                            cb.checked = !cb.checked;
+                            cb.dispatchEvent(new Event('change'));
+                            return;
+                        }
+                        if (e.target.tagName !== 'INPUT') openDetail(img.id);
+                    });
                     card.querySelector('.card-info').addEventListener('click', () => openDetail(img.id));
-                    card.querySelector('.copy-pos').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        copyText(img.prompt, '正向提示词');
-                    });
-                    card.querySelector('.copy-neg').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        copyText(img.negativePrompt, '负向提示词');
-                    });
-                    card.querySelector('.delete-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        deleteImage(img.id);
-                    });
+                    card.querySelector('.copy-pos').addEventListener('click', (e) => { e.stopPropagation(); copyText(img.prompt, '正向提示词'); });
+                    card.querySelector('.copy-neg').addEventListener('click', (e) => { e.stopPropagation(); copyText(img.negativePrompt, '负向提示词'); });
+                    card.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteImage(img.id); });
                     galleryGrid.appendChild(card);
                 });
             }
 
-            // ==================== Copy ====================
             async function copyText(text, label) {
                 if (!text) { showToast(`${label}为空`, 'error'); return; }
-                try {
-                    await navigator.clipboard.writeText(text);
-                    showToast(`${label}已复制`, 'success');
-                } catch (e) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    showToast(`${label}已复制`, 'success');
+                try { await navigator.clipboard.writeText(text); showToast(`${label}已复制`, 'success'); } catch(e) {
+                    const textarea = document.createElement('textarea'); textarea.value = text; document.body.appendChild(textarea); textarea.select(); document.execCommand('copy'); document.body.removeChild(textarea); showToast(`${label}已复制`, 'success');
                 }
             }
 
-            // ==================== Delete ====================
             async function deleteImage(id) {
-                if (!confirm('确定删除这张图片吗？此操作不可恢复。')) return;
+                if (!confirm('确定删除这张图片吗？')) return;
                 try {
                     await dbDeleteImage(id);
                     allImages = allImages.filter(img => img.id !== id);
-                    if (activeFilters.length > 0) {
-                        applyFilters();
-                    } else {
-                        filteredImages = filteredImages.filter(img => img.id !== id);
-                        renderGallery();
-                    }
+                    selectedIds.delete(id);
+                    applyFilters();
                     updateTokenStats();
-                    showToast('已删除', 'success');
-                } catch (err) {
-                    console.error('Delete error:', err);
-                    showToast('删除失败', 'error');
-                }
+                    if (tokenSidebar.classList.contains('active')) renderTokenList();
+                } catch (err) { showToast('删除失败', 'error'); }
             }
 
-            // ==================== Detail Modal ====================
             function openDetail(id) {
                 const img = allImages.find(i => i.id === id);
                 if (!img) return;
                 selectedImageId = id;
                 modalTitle.textContent = img.name;
-                const paramsHtml = `
-                    <div class="params-grid">
-                        ${img.seed !== null ? `<div class="param-item"><span class="param-key">Seed</span><span class="param-value">${img.seed}</span></div>` : ''}
-                        ${img.steps !== null ? `<div class="param-item"><span class="param-key">Steps</span><span class="param-value">${img.steps}</span></div>` : ''}
-                        ${img.sampler ? `<div class="param-item"><span class="param-key">Sampler</span><span class="param-value">${img.sampler}</span></div>` : ''}
-                        ${img.scale !== null ? `<div class="param-item"><span class="param-key">Scale</span><span class="param-value">${img.scale}</span></div>` : ''}
-                    </div>
-                `;
                 modalBody.innerHTML = `
-                    <div class="modal-image-container">
-                        <img src="${img.thumbnailDataURL}" alt="${img.name}">
-                    </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-plus-circle" style="color:var(--success);"></i> 正向提示词</span>
-                        <div class="prompt-text positive">${img.prompt || '无'}</div>
-                        <div class="copy-row">
-                            <button class="copy-btn positive-btn" id="copyPosBtn"><i class="fa-solid fa-copy"></i> 复制正向提示词</button>
+                    <div class="modal-image-container"><img src="${img.thumbnailDataURL}" alt="${img.name}"></div>
+                    <div class="modal-section"><span class="section-label"><i class="fa-solid fa-plus-circle"></i> 正向提示词</span><div class="prompt-text positive">${img.prompt || '无'}</div><button class="copy-btn positive-btn" id="copyPosBtn"><i class="fa-solid fa-copy"></i> 复制正向提示词</button></div>
+                    <div class="modal-section"><span class="section-label"><i class="fa-solid fa-minus-circle"></i> 负向提示词</span><div class="prompt-text negative">${img.negativePrompt || '无'}</div><button class="copy-btn negative-btn" id="copyNegBtn"><i class="fa-solid fa-copy"></i> 复制负向提示词</button></div>
+                    <div class="modal-section"><span class="section-label"><i class="fa-solid fa-gear"></i> 生成参数</span>
+                        <div class="params-grid">
+                            ${img.seed !== null ? `<div class="param-item"><span class="param-key">Seed</span><span class="param-value">${img.seed}</span></div>` : ''}
+                            ${img.steps !== null ? `<div class="param-item"><span class="param-key">Steps</span><span class="param-value">${img.steps}</span></div>` : ''}
+                            ${img.sampler ? `<div class="param-item"><span class="param-key">Sampler</span><span class="param-value">${img.sampler}</span></div>` : ''}
+                            ${img.scale !== null ? `<div class="param-item"><span class="param-key">Scale</span><span class="param-value">${img.scale}</span></div>` : ''}
                         </div>
                     </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-minus-circle" style="color:var(--danger);"></i> 负向提示词</span>
-                        <div class="prompt-text negative">${img.negativePrompt || '无'}</div>
-                        <div class="copy-row">
-                            <button class="copy-btn negative-btn" id="copyNegBtn"><i class="fa-solid fa-copy"></i> 复制负向提示词</button>
-                        </div>
-                    </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-gear"></i> 生成参数</span>
-                        ${paramsHtml}
-                    </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-tags"></i> 正向词条 (${img.promptTokens.length})</span>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                            ${img.promptTokens.map(t => `<span style="font-size:11px;background:#eef1ff;color:var(--primary);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}
-                        </div>
-                    </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-tags"></i> 负向词条 (${img.negativeTokens.length})</span>
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                            ${img.negativeTokens.map(t => `<span style="font-size:11px;background:#fdf0ef;color:var(--danger);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}
-                        </div>
-                    </div>
+                    <div class="modal-section"><span class="section-label">正向词条 (${img.promptTokens.length})</span><div style="display:flex;flex-wrap:wrap;gap:6px;">${img.promptTokens.map(t => `<span style="font-size:11px;background:#eef1ff;color:var(--primary);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}</div></div>
+                    <div class="modal-section"><span class="section-label">负向词条 (${img.negativeTokens.length})</span><div style="display:flex;flex-wrap:wrap;gap:6px;">${img.negativeTokens.map(t => `<span style="font-size:11px;background:#fdf0ef;color:var(--danger);padding:3px 8px;border-radius:12px;">${t}</span>`).join('')}</div></div>
                 `;
                 document.getElementById('copyPosBtn').addEventListener('click', () => copyText(img.prompt, '正向提示词'));
                 document.getElementById('copyNegBtn').addEventListener('click', () => copyText(img.negativePrompt, '负向提示词'));
                 detailModal.classList.add('active');
             }
 
-            function closeDetail() {
-                detailModal.classList.remove('active');
-                selectedImageId = null;
-            }
+            function closeDetail() { detailModal.classList.remove('active'); }
 
-            // ==================== Difference Modal ====================
             function openDiffModal(imgA, imgB) {
                 const commonPos = imgA.promptTokens.filter(t => imgB.promptTokens.includes(t));
                 const commonNeg = imgA.negativeTokens.filter(t => imgB.negativeTokens.includes(t));
@@ -902,64 +955,40 @@
                 const diffPosB = imgB.promptTokens.filter(t => !imgA.promptTokens.includes(t));
                 const diffNegA = imgA.negativeTokens.filter(t => !imgB.negativeTokens.includes(t));
                 const diffNegB = imgB.negativeTokens.filter(t => !imgA.negativeTokens.includes(t));
-
-                const renderTokenList = (tokens, type) => {
-                    return tokens.map(t => `<span class="diff-token ${type}">${t}</span>`).join('') || '<span style="color:#aaa;">无</span>';
-                };
-
+                const renderTokenList = (tokens, type) => tokens.map(t => `<span class="diff-token ${type}">${t}</span>`).join('') || '<span style="color:#aaa;">无</span>';
                 diffModalBody.innerHTML = `
                     <div class="diff-container">
-                        <div class="diff-card">
-                            <div class="diff-title"><i class="fa-solid fa-image"></i> ${imgA.name}</div>
-                            <div class="modal-section">
-                                <span class="section-label" style="color:var(--success);">正向独有</span>
-                                <div class="diff-token-list">${renderTokenList(diffPosA, 'positive')}</div>
-                            </div>
-                            <div class="modal-section">
-                                <span class="section-label" style="color:var(--danger);">负向独有</span>
-                                <div class="diff-token-list">${renderTokenList(diffNegA, 'negative')}</div>
-                            </div>
-                        </div>
-                        <div class="diff-card">
-                            <div class="diff-title"><i class="fa-solid fa-image"></i> ${imgB.name}</div>
-                            <div class="modal-section">
-                                <span class="section-label" style="color:var(--success);">正向独有</span>
-                                <div class="diff-token-list">${renderTokenList(diffPosB, 'positive')}</div>
-                            </div>
-                            <div class="modal-section">
-                                <span class="section-label" style="color:var(--danger);">负向独有</span>
-                                <div class="diff-token-list">${renderTokenList(diffNegB, 'negative')}</div>
-                            </div>
-                        </div>
+                        <div class="diff-card"><div class="diff-title">${imgA.name}</div><span class="section-label">正向独有</span><div class="diff-token-list">${renderTokenList(diffPosA, 'positive')}</div><span class="section-label">负向独有</span><div class="diff-token-list">${renderTokenList(diffNegA, 'negative')}</div></div>
+                        <div class="diff-card"><div class="diff-title">${imgB.name}</div><span class="section-label">正向独有</span><div class="diff-token-list">${renderTokenList(diffPosB, 'positive')}</div><span class="section-label">负向独有</span><div class="diff-token-list">${renderTokenList(diffNegB, 'negative')}</div></div>
                     </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同正向词条</span>
-                        <div class="diff-token-list">${renderTokenList(commonPos, 'positive')}</div>
-                    </div>
-                    <div class="modal-section">
-                        <span class="section-label"><i class="fa-solid fa-circle-check"></i> 共同负向词条</span>
-                        <div class="diff-token-list">${renderTokenList(commonNeg, 'negative')}</div>
-                    </div>
+                    <div class="modal-section"><span class="section-label">共同正向词条</span><div class="diff-token-list">${renderTokenList(commonPos, 'positive')}</div></div>
+                    <div class="modal-section"><span class="section-label">共同负向词条</span><div class="diff-token-list">${renderTokenList(commonNeg, 'negative')}</div></div>
                 `;
                 diffModal.classList.add('active');
             }
+            function closeDiffModal() { diffModal.classList.remove('active'); }
 
-            function closeDiffModal() {
-                diffModal.classList.remove('active');
+            function openWeightDiffModal(imgA, imgB) {
+                const weightsA = { ...(imgA.promptWeights || {}), ...(imgA.negativeWeights || {}) };
+                const weightsB = { ...(imgB.promptWeights || {}), ...(imgB.negativeWeights || {}) };
+                const allTokens = new Set([...Object.keys(weightsA), ...Object.keys(weightsB)]);
+                const diffTokens = [];
+                allTokens.forEach(token => {
+                    const wA = weightsA[token] !== undefined ? weightsA[token] : 1.0;
+                    const wB = weightsB[token] !== undefined ? weightsB[token] : 1.0;
+                    if (Math.abs(wA - wB) > 0.001) diffTokens.push({ token, wA, wB });
+                });
+                if (diffTokens.length === 0) { showToast('没有权重差异', 'info'); return; }
+                weightDiffBody.innerHTML = `<div class="weight-diff-list">${diffTokens.map(d => `<div class="weight-diff-row"><span class="diff-token-name">${d.token}</span><span class="diff-weight">${imgA.name}: <strong>${d.wA}</strong></span><span class="diff-weight">${imgB.name}: <strong>${d.wB}</strong></span></div>`).join('')}</div>`;
+                weightDiffModal.classList.add('active');
             }
+            function closeWeightDiffModal() { weightDiffModal.classList.remove('active'); }
 
-            // ==================== Token Library ====================
             function updateTokenStats() {
                 tokenStats = { positive: {}, negative: {} };
                 allImages.forEach(img => {
-                    img.promptTokens.forEach(token => {
-                        if (!tokenStats.positive[token]) tokenStats.positive[token] = 0;
-                        tokenStats.positive[token]++;
-                    });
-                    img.negativeTokens.forEach(token => {
-                        if (!tokenStats.negative[token]) tokenStats.negative[token] = 0;
-                        tokenStats.negative[token]++;
-                    });
+                    img.promptTokens.forEach(token => { tokenStats.positive[token] = (tokenStats.positive[token] || 0) + 1; });
+                    img.negativeTokens.forEach(token => { tokenStats.negative[token] = (tokenStats.negative[token] || 0) + 1; });
                 });
             }
 
@@ -967,10 +996,7 @@
                 const searchTerm = tokenSearchInput.value.trim().toLowerCase();
                 const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
                 const entries = Object.entries(stats).sort((a,b) => b[1] - a[1]);
-                const filtered = entries.filter(([token, count]) => {
-                    if (!searchTerm) return true;
-                    return token.toLowerCase().includes(searchTerm);
-                });
+                const filtered = entries.filter(([token]) => !searchTerm || token.toLowerCase().includes(searchTerm));
                 if (filtered.length === 0) {
                     tokenList.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>暂无词条</div>';
                     return;
@@ -979,23 +1005,43 @@
                 filtered.forEach(([token, count]) => {
                     const item = document.createElement('div');
                     item.className = 'token-item';
-                    const isActive = activeFilters.includes(token);
-                    item.style.borderColor = isActive ? 'var(--primary)' : 'transparent';
-                    item.style.background = isActive ? '#eef1ff' : '#f8f9fa';
                     const countClass = currentTokenTab === 'positive' ? 'pos' : 'neg';
-                    item.innerHTML = `
-                        <span class="token-name">${token}</span>
-                        <span class="token-count ${countClass}">${count} 次</span>
-                    `;
-                    item.addEventListener('click', () => {
-                        if (isActive) {
-                            removeFilter(token);
-                        } else {
-                            addFilter(token);
-                        }
-                        renderTokenList();
+                    item.innerHTML = `<span class="token-name" data-token="${token}">${token}</span><span class="token-count ${countClass}">${count} 次</span><button class="filter-token-btn" data-token="${token}"><i class="fa-solid fa-filter"></i></button>`;
+                    item.querySelector('.token-name').addEventListener('click', () => {
+                        currentTokenDetail = { token, type: currentTokenTab };
+                        renderWeightBar(token, currentTokenTab);
+                    });
+                    item.querySelector('.filter-token-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        addFilter({ token, type: currentTokenTab });
                     });
                     tokenList.appendChild(item);
+                });
+            }
+
+            function renderWeightBar(token, type) {
+                if (!token) { tokenWeightBar.style.display = 'none'; return; }
+                const weights = {};
+                const images = allImages.filter(img => {
+                    if (type === 'positive') return img.promptTokens.includes(token);
+                    else return img.negativeTokens.includes(token);
+                });
+                images.forEach(img => {
+                    const w = type === 'positive' ? (img.promptWeights?.[token] ?? 1.0) : (img.negativeWeights?.[token] ?? 1.0);
+                    weights[w] = (weights[w] || 0) + 1;
+                });
+                const capsules = Object.entries(weights).sort((a,b) => parseFloat(a[0]) - parseFloat(b[0])).map(([weight, count]) => {
+                    return `<span class="weight-capsule" data-weight="${weight}" data-token="${token}" data-type="${type}">${weight} <span class="weight-count">${count}</span></span>`;
+                }).join('');
+                tokenWeightBar.innerHTML = `<strong>${token} 权重使用率:</strong> ${capsules || '无权重数据'}`;
+                tokenWeightBar.style.display = 'block';
+                tokenWeightBar.querySelectorAll('.weight-capsule').forEach(cap => {
+                    cap.addEventListener('click', () => {
+                        const weight = parseFloat(cap.dataset.weight);
+                        const token = cap.dataset.token;
+                        const type = cap.dataset.type;
+                        addFilter({ token, weight, type });
+                    });
                 });
             }
 
@@ -1003,162 +1049,206 @@
                 tokenSidebar.classList.add('active');
                 updateTokenStats();
                 renderTokenList();
+                if (currentTokenDetail) renderWeightBar(currentTokenDetail.token, currentTokenDetail.type);
             }
 
-            function closeTokenSidebar() {
-                tokenSidebar.classList.remove('active');
-            }
+            function closeTokenSidebar() { tokenSidebar.classList.remove('active'); }
 
-            // ==================== Similarity Overlay ====================
             function openSimilarity() {
-                if (allImages.length < 2) {
-                    showToast('至少需要2张图片才能进行相似度比对', 'error');
-                    return;
-                }
+                if (allImages.length < 2) { showToast('至少需要2张图片', 'error'); return; }
                 similarityOverlay.classList.add('active');
                 renderSimilarityResults();
             }
-
-            function closeSimilarity() {
-                similarityOverlay.classList.remove('active');
-            }
+            function closeSimilarity() { similarityOverlay.classList.remove('active'); }
 
             function renderSimilarityResults() {
                 const threshold = parseFloat(thresholdSlider.value);
                 const excludeCommon = excludeCommonCheckbox.checked;
                 const results = calculateSimilarities(allImages, threshold, excludeCommon);
-                if (results.length === 0) {
-                    similarityResults.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-check-circle" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>没有找到超过阈值的相似图片对</div>';
-                    return;
-                }
+                if (results.length === 0) { similarityResults.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-check-circle" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>没有找到超过阈值的相似图片对</div>'; return; }
                 similarityResults.innerHTML = '';
                 results.forEach(result => {
                     const pair = document.createElement('div');
                     pair.className = 'sim-pair';
                     const isHigh = result.similarity >= 0.6;
+                    const imgA = result.imgA, imgB = result.imgB;
+                    const sameTokenSet = imgA.promptTokens.length === imgB.promptTokens.length && imgA.promptTokens.every(t => imgB.promptTokens.includes(t)) && imgA.negativeTokens.length === imgB.negativeTokens.length && imgA.negativeTokens.every(t => imgB.negativeTokens.includes(t));
+                    let hasWeightDiff = false;
+                    if (sameTokenSet) {
+                        const wa = {...(imgA.promptWeights||{}), ...(imgA.negativeWeights||{})};
+                        const wb = {...(imgB.promptWeights||{}), ...(imgB.negativeWeights||{})};
+                        const allToks = new Set([...Object.keys(wa), ...Object.keys(wb)]);
+                        allToks.forEach(tok => { if (Math.abs((wa[tok]??1.0) - (wb[tok]??1.0)) > 0.001) hasWeightDiff = true; });
+                    }
                     pair.innerHTML = `
-                        <div class="sim-thumbs">
-                            <img src="${result.imgA.thumbnailDataURL}" alt="${result.imgA.name}" data-id="${result.imgA.id}" title="${result.imgA.name}">
-                            <img src="${result.imgB.thumbnailDataURL}" alt="${result.imgB.name}" data-id="${result.imgB.id}" title="${result.imgB.name}">
-                        </div>
-                        <div class="sim-info">
-                            <div class="sim-score ${isHigh ? 'high' : ''}">
-                                <i class="fa-solid ${isHigh ? 'fa-triangle-exclamation' : 'fa-chart-line'}"></i>
-                                相似度: ${(result.similarity * 100).toFixed(1)}%
-                            </div>
-                            <div class="sim-common-tokens">
-                                共同词条: ${result.commonTokens.slice(0, 8).join(', ')}${result.commonTokens.length > 8 ? '...' : ''}
-                            </div>
-                        </div>
+                        <div class="sim-thumbs"><img src="${imgA.thumbnailDataURL}" data-id="${imgA.id}" title="${imgA.name}"><img src="${imgB.thumbnailDataURL}" data-id="${imgB.id}" title="${imgB.name}"></div>
+                        <div class="sim-info"><div class="sim-score ${isHigh ? 'high' : ''}"><i class="fa-solid ${isHigh ? 'fa-triangle-exclamation' : 'fa-chart-line'}"></i> 相似度: ${(result.similarity * 100).toFixed(1)}%</div><div class="sim-common-tokens">共同词条: ${result.commonTokens.slice(0,8).join(', ')}${result.commonTokens.length > 8 ? '...' : ''}</div></div>
                         <div class="sim-actions">
-                            <button class="sim-action-btn diff-btn" data-diff="true" data-a="${result.imgA.id}" data-b="${result.imgB.id}">
-                                <i class="fa-solid fa-code-compare"></i> 差异
-                            </button>
-                            <button class="sim-action-btn delete" data-id="${result.imgA.id}" title="删除左侧图片">
-                                <i class="fa-solid fa-trash"></i> 左
-                            </button>
-                            <button class="sim-action-btn delete" data-id="${result.imgB.id}" title="删除右侧图片">
-                                <i class="fa-solid fa-trash"></i> 右
-                            </button>
+                            <button class="sim-action-btn diff-btn" data-a="${imgA.id}" data-b="${imgB.id}"><i class="fa-solid fa-code-compare"></i> 差异</button>
+                            ${hasWeightDiff ? `<button class="sim-action-btn weight-diff-btn" data-a="${imgA.id}" data-b="${imgB.id}"><i class="fa-solid fa-weight-scale"></i> 权重差异</button>` : ''}
+                            <button class="sim-action-btn delete" data-id="${imgA.id}"><i class="fa-solid fa-trash"></i> 左</button>
+                            <button class="sim-action-btn delete" data-id="${imgB.id}"><i class="fa-solid fa-trash"></i> 右</button>
                         </div>
                     `;
-                    pair.querySelector('.diff-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const imgAId = e.currentTarget.dataset.a;
-                        const imgBId = e.currentTarget.dataset.b;
-                        const imgA = allImages.find(i => i.id === imgAId);
-                        const imgB = allImages.find(i => i.id === imgBId);
-                        if (imgA && imgB) openDiffModal(imgA, imgB);
-                    });
-                    pair.querySelectorAll('.sim-thumbs img').forEach(imgEl => {
-                        imgEl.addEventListener('click', () => openDetail(imgEl.dataset.id));
-                    });
-                    pair.querySelectorAll('.sim-action-btn.delete').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const id = e.currentTarget.dataset.id;
-                            deleteImage(id);
-                            setTimeout(renderSimilarityResults, 300);
-                        });
-                    });
+                    pair.querySelector('.diff-btn').addEventListener('click', () => { const a = allImages.find(i=>i.id===imgA.id); const b = allImages.find(i=>i.id===imgB.id); if(a&&b) openDiffModal(a,b); });
+                    if (hasWeightDiff) pair.querySelector('.weight-diff-btn').addEventListener('click', () => { const a = allImages.find(i=>i.id===imgA.id); const b = allImages.find(i=>i.id===imgB.id); if(a&&b) openWeightDiffModal(a,b); });
+                    pair.querySelectorAll('.sim-thumbs img').forEach(el => el.addEventListener('click', () => openDetail(el.dataset.id)));
+                    pair.querySelectorAll('.sim-action-btn.delete').forEach(btn => btn.addEventListener('click', () => { deleteImage(btn.dataset.id); setTimeout(renderSimilarityResults, 300); }));
                     similarityResults.appendChild(pair);
                 });
             }
 
-            // ==================== Event Listeners ====================
+            function toggleSelectionMode() {
+                selectionMode = !selectionMode;
+                selectedIds.clear();
+                downloadActions.classList.toggle('active', selectionMode);
+                renderGallery();
+            }
+
+            function downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+
+            async function downloadSelected(withMeta) {
+                if (selectedIds.size === 0) { showToast('请先选择图片', 'error'); return; }
+                const images = allImages.filter(img => selectedIds.has(img.id));
+                for (const img of images) {
+                    try {
+                        if (withMeta) downloadBlob(img.fileBlob, img.name);
+                        else {
+                            if (img.fileBlob.type === 'image/png') {
+                                const noMetaBlob = await removePNGMetadata(img.fileBlob);
+                                downloadBlob(noMetaBlob, img.name);
+                            } else downloadBlob(img.fileBlob, img.name);
+                        }
+                    } catch(e) { showToast(`下载 ${img.name} 失败`, 'error'); }
+                }
+                showToast(`已开始下载 ${images.length} 张图片`, 'success');
+            }
+
+            async function compressAllImages() {
+                if (!confirm('重新压缩所有图片（最大边长2048px），覆盖原文件，确定？')) return;
+                let processed = 0;
+                for (const img of allImages) {
+                    try {
+                        const newBlob = await compressImage(img);
+                        const newThumb = await generateThumbnailFromBlob(newBlob);
+                        const updated = { ...img, fileBlob: newBlob, thumbnailDataURL: newThumb };
+                        await dbAddImage(updated);
+                        processed++;
+                    } catch(e) { showToast(`压缩 ${img.name} 失败`, 'error'); }
+                }
+                showToast(`压缩完成 ${processed}/${allImages.length}`, 'success');
+                await loadAllImages();
+            }
+
+            function compressImage(img) {
+                return new Promise((resolve, reject) => {
+                    const url = URL.createObjectURL(img.fileBlob);
+                    const image = new Image();
+                    image.onload = () => {
+                        try {
+                            const maxDim = 2048;
+                            let w = image.width, h = image.height;
+                            if (w > maxDim || h > maxDim) { const ratio = Math.min(maxDim/w, maxDim/h); w = Math.round(w*ratio); h = Math.round(h*ratio); }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(image, 0, 0, w, h);
+                            canvas.toBlob(async (pngBlob) => {
+                                URL.revokeObjectURL(url);
+                                if (!pngBlob) { reject(new Error('Canvas toBlob failed')); return; }
+                                if (img.fileBlob.type === 'image/png') {
+                                    const metadataObj = { prompt: img.prompt || '', uc: img.negativePrompt || '', seed: img.seed ?? undefined, steps: img.steps ?? undefined, sampler: img.sampler || undefined, scale: img.scale ?? undefined };
+                                    const finalBlob = await createPNGWithMetadata(pngBlob, metadataObj);
+                                    resolve(finalBlob);
+                                } else resolve(pngBlob);
+                            }, 'image/png');
+                        } catch(e) { reject(e); }
+                    };
+                    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片加载失败')); };
+                    image.src = url;
+                });
+            }
+
+            async function deleteDuplicateImages() {
+                const groups = new Map();
+                allImages.forEach(img => {
+                    const key = JSON.stringify({ p: img.prompt, n: img.negativePrompt, seed: img.seed, steps: img.steps, sampler: img.sampler, scale: img.scale });
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(img);
+                });
+                let deleteCount = 0;
+                groups.forEach(imgs => { if (imgs.length > 1) deleteCount += imgs.length - 1; });
+                if (deleteCount === 0) { showToast('没有发现重复元数据图片', 'info'); return; }
+                if (!confirm(`发现 ${deleteCount} 张重复图片，将删除重复项（保留每组最早一张），确定？`)) return;
+                let deleted = 0;
+                for (const imgs of groups.values()) {
+                    if (imgs.length > 1) {
+                        imgs.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
+                        for (const img of imgs.slice(1)) {
+                            try { await dbDeleteImage(img.id); deleted++; } catch(e) { console.error(e); }
+                        }
+                    }
+                }
+                showToast(`已删除 ${deleted} 张重复图片`, 'success');
+                await loadAllImages();
+            }
+
             uploadBtn.addEventListener('click', () => fileInput.click());
             uploadHintBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleFiles(e.target.files);
-                    fileInput.value = '';
-                }
-            });
-
-            const galleryArea = document.getElementById('gallery');
-            galleryArea.addEventListener('dragover', (e) => { e.preventDefault(); galleryArea.style.backgroundColor = '#eef1ff'; });
-            galleryArea.addEventListener('dragleave', (e) => { e.preventDefault(); galleryArea.style.backgroundColor = ''; });
-            galleryArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                galleryArea.style.backgroundColor = '';
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
-            });
+            fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFiles(e.target.files); fileInput.value = ''; });
+            document.getElementById('gallery').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = '#eef1ff'; });
+            document.getElementById('gallery').addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = ''; });
+            document.getElementById('gallery').addEventListener('drop', (e) => { e.preventDefault(); e.currentTarget.style.backgroundColor = ''; if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
 
             clearFilterBtn.addEventListener('click', clearAllFilters);
-
             modalCloseBtn.addEventListener('click', closeDetail);
             detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetail(); });
-
             diffModalCloseBtn.addEventListener('click', closeDiffModal);
             diffModal.addEventListener('click', (e) => { if (e.target === diffModal) closeDiffModal(); });
+            weightDiffCloseBtn.addEventListener('click', closeWeightDiffModal);
+            weightDiffModal.addEventListener('click', (e) => { if (e.target === weightDiffModal) closeWeightDiffModal(); });
 
             tokenLibraryBtn.addEventListener('click', openTokenSidebar);
             tokenSidebarClose.addEventListener('click', closeTokenSidebar);
-
-            tabPositive.addEventListener('click', () => {
-                currentTokenTab = 'positive';
-                tabPositive.classList.add('active');
-                tabNegative.classList.remove('active');
-                renderTokenList();
-            });
-            tabNegative.addEventListener('click', () => {
-                currentTokenTab = 'negative';
-                tabNegative.classList.add('active');
-                tabPositive.classList.remove('active');
-                renderTokenList();
-            });
+            tabPositive.addEventListener('click', () => { currentTokenTab = 'positive'; tabPositive.classList.add('active'); tabNegative.classList.remove('active'); renderTokenList(); if(currentTokenDetail?.type === 'positive') renderWeightBar(currentTokenDetail.token, 'positive'); });
+            tabNegative.addEventListener('click', () => { currentTokenTab = 'negative'; tabNegative.classList.add('active'); tabPositive.classList.remove('active'); renderTokenList(); if(currentTokenDetail?.type === 'negative') renderWeightBar(currentTokenDetail.token, 'negative'); });
             tokenSearchInput.addEventListener('input', renderTokenList);
 
             similarityBtn.addEventListener('click', openSimilarity);
             similarityCloseBtn.addEventListener('click', closeSimilarity);
             similarityOverlay.addEventListener('click', (e) => { if (e.target === similarityOverlay) closeSimilarity(); });
-            thresholdSlider.addEventListener('input', () => {
-                thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2);
-                renderSimilarityResults();
-            });
+            thresholdSlider.addEventListener('input', () => { thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2); renderSimilarityResults(); });
             excludeCommonCheckbox.addEventListener('change', renderSimilarityResults);
+
+            downloadModeBtn.addEventListener('click', toggleSelectionMode);
+            selectAllBtn.addEventListener('click', () => { filteredImages.forEach(img => selectedIds.add(img.id)); renderGallery(); });
+            deselectAllBtn.addEventListener('click', () => { selectedIds.clear(); renderGallery(); });
+            downloadWithMetaBtn.addEventListener('click', () => downloadSelected(true));
+            downloadNoMetaBtn.addEventListener('click', () => downloadSelected(false));
+            compressBtn.addEventListener('click', compressAllImages);
+            deleteDuplicatesBtn.addEventListener('click', deleteDuplicateImages);
 
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     if (detailModal.classList.contains('active')) closeDetail();
                     if (diffModal.classList.contains('active')) closeDiffModal();
+                    if (weightDiffModal.classList.contains('active')) closeWeightDiffModal();
                     if (similarityOverlay.classList.contains('active')) closeSimilarity();
                     if (tokenSidebar.classList.contains('active')) closeTokenSidebar();
                 }
             });
 
-            async function init() {
+            (async function init() {
                 await loadAllImages();
-                if (allImages.length > 0) {
-                    galleryEmpty.style.display = 'none';
-                    galleryGrid.style.display = 'grid';
-                }
-            }
-
-            init().catch(err => {
-                console.error('Init error:', err);
-                showToast('初始化失败，请刷新页面重试', 'error');
-            });
+                if (allImages.length > 0) { galleryEmpty.style.display = 'none'; galleryGrid.style.display = 'grid'; }
+            })().catch(err => { console.error(err); showToast('初始化失败', 'error'); });
         })();
     </script>
 </body>
