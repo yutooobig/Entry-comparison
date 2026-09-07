@@ -2935,4 +2935,747 @@
                     const isActive = activeTagFilters.includes(label);
                     const color = getLabelColor(label);
                     html +=
-                        `<span class="tag-filter-capsule ${isActive ? 'active' : ''}" data-label="${label}" style="${isActive ? '' : `border-color:${color}30;background:${color}15;color:${color};`}"><i class="fa-solid fa-tag" style
+                        `<span class="tag-filter-capsule ${isActive ? 'active' : ''}" data-label="${label}" style="${isActive ? '' : `border-color:${color}30;background:${color}15;color:${color};`}"><i class="fa-solid fa-tag" style="font-size:9px;"></i> ${label} <span class="tag-count">${count}</span></span>`;
+                });
+                tagFilterBar.innerHTML = html;
+                tagFilterBar.querySelectorAll('.tag-filter-capsule').forEach(cap => {
+                    cap.addEventListener('click', () => {
+                        const label = cap.dataset.label;
+                        if (label === '__all__') {
+                            activeTagFilters = [];
+                        } else {
+                            const idx = activeTagFilters.indexOf(label);
+                            if (idx >= 0) activeTagFilters.splice(idx, 1);
+                            else activeTagFilters.push(label);
+                        }
+                        renderTagFilterBar();
+                        renderTokenList();
+                    });
+                });
+            }
+
+            // ==================== 词条列表渲染 ====================
+            function renderTokenList() {
+                const searchTerm = tokenSearchInput.value.trim().toLowerCase();
+                const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
+                const tokenLabels = loadTokenLabels();
+                const blockedTokensData = loadBlockedTokens();
+                let entries = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+
+                // 应用标签筛选
+                if (activeTagFilters.length > 0) {
+                    entries = entries.filter(([token]) => {
+                        const labels = tokenLabels[token] || [];
+                        return activeTagFilters.every(l => labels.includes(l));
+                    });
+                }
+
+                // 应用搜索
+                if (searchTerm) {
+                    entries = entries.filter(([token]) => {
+                        const labels = tokenLabels[token] || [];
+                        return token.toLowerCase().includes(searchTerm) || labels.some(l => l.toLowerCase().includes(
+                            searchTerm));
+                    });
+                }
+
+                // 过滤被屏蔽展示的词条（批量标注模式下不过滤，方便管理）
+                if (!batchLabelMode) {
+                    entries = entries.filter(([token]) => {
+                        const settings = getEffectiveBlockSettings(token);
+                        return !settings.display;
+                    });
+                }
+
+                if (entries.length === 0) {
+                    tokenList.innerHTML =
+                        '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>暂无词条</div>';
+                    if (batchLabelMode) updateBatchSelectionUI();
+                    return;
+                }
+                tokenList.innerHTML = '';
+                entries.forEach(([token, count]) => {
+                    const item = document.createElement('div');
+                    item.className = 'token-item';
+                    const countClass = currentTokenTab === 'positive' ? 'pos' : 'neg';
+                    const labels = tokenLabels[token] || [];
+                    const blockSettings = getEffectiveBlockSettings(token);
+                    const isBlockedDisplay = blockSettings.display;
+                    const isBlockedCopy = blockSettings.copy;
+                    const isBlockedDiff = blockSettings.diff;
+                    const isBatchSelected = batchSelectedTokens.has(token);
+                    const isCheckedInBatch = batchLabelMode && isBatchSelected;
+
+                    let labelsHtml = '';
+                    if (labels.length > 0) {
+                        const shownLabels = labels.slice(0, 2);
+                        const moreCount = labels.length - shownLabels.length;
+                        shownLabels.forEach(l => {
+                            const color = getLabelColor(l);
+                            labelsHtml +=
+                                `<span class="tag-badge" data-label="${l}" title="点击筛选: ${l}" style="background:${color}15;color:${color};border:1px solid ${color}40;">${l}</span>`;
+                        });
+                        if (moreCount > 0) {
+                            labelsHtml +=
+                                `<span class="tag-badge more-tags" title="${labels.join(', ')}">+${moreCount}</span>`;
+                        }
+                    }
+
+                    const blockIndicator = (isBlockedDisplay || isBlockedCopy || isBlockedDiff) ?
+                        `<span title="已屏蔽: ${isBlockedDisplay?'展示 ':''}${isBlockedCopy?'复制 ':''}${isBlockedDiff?'差异':''}" style="font-size:10px;color:var(--danger);">🚫</span>` :
+                        '';
+
+                    item.innerHTML = `
+                        <input type="checkbox" class="token-checkbox ${batchLabelMode ? 'show' : ''}" data-token="${token}" ${isCheckedInBatch ? 'checked' : ''}>
+                        <span class="token-name" data-token="${token}">${token}</span>
+                        ${labelsHtml}
+                        ${blockIndicator}
+                        <span class="token-count ${countClass}">${count} 次</span>
+                        <button class="token-action-btn tag-btn ${labels.length > 0 ? 'has-tag' : ''}" data-token="${token}" title="打标签"><i class="fa-solid fa-tag"></i></button>
+                        <button class="token-action-btn block-btn ${(isBlockedDisplay||isBlockedCopy||isBlockedDiff) ? 'blocked' : ''}" data-token="${token}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
+                        <button class="token-action-btn filter-token-btn" data-token="${token}" title="筛选图片"><i class="fa-solid fa-filter"></i></button>
+                    `;
+
+                    const nameEl = item.querySelector('.token-name');
+                    nameEl.addEventListener('click', () => {
+                        if (batchLabelMode) return;
+                        currentTokenDetail = { token, type: currentTokenTab };
+                        renderWeightBar(token, currentTokenTab);
+                    });
+
+                    const checkbox = item.querySelector('.token-checkbox');
+                    checkbox.addEventListener('change', (e) => {
+                        e.stopPropagation();
+                        const t = e.target.dataset.token;
+                        if (e.target.checked) batchSelectedTokens.add(t);
+                        else batchSelectedTokens.delete(t);
+                        updateBatchSelectionUI();
+                    });
+
+                    item.querySelector('.filter-token-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        addFilter({ token, type: currentTokenTab });
+                    });
+                    item.querySelector('.tag-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openTagSelectorForToken(token);
+                    });
+                    item.querySelector('.block-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openBlockSettingsForToken(token);
+                    });
+
+                    // 标签徽章点击筛选
+                    item.querySelectorAll('.tag-badge[data-label]').forEach(badge => {
+                        badge.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const label = badge.dataset.label;
+                            if (!activeTagFilters.includes(label)) {
+                                activeTagFilters.push(label);
+                            } else {
+                                activeTagFilters = activeTagFilters.filter(l => l !== label);
+                            }
+                            renderTagFilterBar();
+                            renderTokenList();
+                        });
+                    });
+
+                    tokenList.appendChild(item);
+                });
+                if (batchLabelMode) updateBatchSelectionUI();
+            }
+
+            function updateBatchSelectionUI() {
+                const count = batchSelectedTokens.size;
+                batchSelectedCount.textContent = `已选 ${count} 项`;
+                if (batchLabelMode) {
+                    // 更新复选框状态
+                    tokenList.querySelectorAll('.token-checkbox').forEach(cb => {
+                        cb.checked = batchSelectedTokens.has(cb.dataset.token);
+                    });
+                }
+            }
+
+            function renderWeightBar(token, type) {
+                if (!token) { tokenWeightBar.style.display = 'none'; return; }
+                const weights = {};
+                const images = allImages.filter(img => {
+                    if (type === 'positive') return img.promptTokens.includes(token);
+                    else return img.negativeTokens.includes(token);
+                });
+                images.forEach(img => {
+                    const w = type === 'positive' ? (img.promptWeights?.[token] ?? 1.0) : (img.negativeWeights?.[token] ??
+                        1.0);
+                    weights[w] = (weights[w] || 0) + 1;
+                });
+                const capsules = Object.entries(weights).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0])).map((
+                [weight, count]) => {
+                    return `<span class="weight-capsule" data-weight="${weight}" data-token="${token}" data-type="${type}">${weight} <span class="weight-count">${count}</span></span>`;
+                }).join('');
+                tokenWeightBar.innerHTML = `<strong>${token} 权重使用率:</strong> ${capsules || '无权重数据'}`;
+                tokenWeightBar.style.display = 'block';
+                tokenWeightBar.querySelectorAll('.weight-capsule').forEach(cap => {
+                    cap.addEventListener('click', () => {
+                        const weight = parseFloat(cap.dataset.weight);
+                        const token = cap.dataset.token;
+                        const type = cap.dataset.type;
+                        setWeightFilter(token, type, weight);
+                    });
+                });
+            }
+
+            function openTokenSidebar() {
+                tokenSidebar.classList.add('active');
+                updateTokenStats();
+                renderTagFilterBar();
+                renderTokenList();
+                if (currentTokenDetail) renderWeightBar(currentTokenDetail.token, currentTokenDetail.type);
+            }
+
+            function closeTokenSidebar() {
+                tokenSidebar.classList.remove('active');
+                if (batchLabelMode) toggleBatchLabelMode();
+            }
+
+            // ==================== 批量标注 ====================
+            function toggleBatchLabelMode() {
+                batchLabelMode = !batchLabelMode;
+                batchSelectedTokens.clear();
+                batchLabelBtn.classList.toggle('active', batchLabelMode);
+                batchActionBar.classList.toggle('active', batchLabelMode);
+                renderTokenList();
+                if (batchLabelMode) {
+                    showToast('批量标注模式已开启，请勾选词条', 'info');
+                } else {
+                    showToast('批量标注模式已关闭', 'info');
+                }
+            }
+
+            // ==================== 标签管理模态框 ====================
+            function openTagManager() {
+                const customLabels = loadCustomLabels();
+                const tokenLabels = loadTokenLabels();
+                const blockedLabels = loadBlockedLabels();
+                let html = '';
+                if (customLabels.length === 0) {
+                    html +=
+                        '<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px;">暂无标签，请添加</div>';
+                } else {
+                    html += '<div class="tag-manage-list">';
+                    customLabels.forEach(label => {
+                        const count = Object.entries(tokenLabels).filter(([t, labels]) => labels.includes(
+                            label)).length;
+                        const isBlocked = blockedLabels[label];
+                        const color = getLabelColor(label);
+                        html += `
+                            <div class="tag-manage-item">
+                                <span class="tag-manage-name"><span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;"></span> ${label}</span>
+                                <span class="tag-manage-count">${count} 词条</span>
+                                ${isBlocked ? '<span style="font-size:10px;color:var(--danger);">🚫</span>' : ''}
+                                <button class="tag-manage-delete" data-label="${label}" title="删除标签"><i class="fa-solid fa-trash"></i></button>
+                            </div>`;
+                    });
+                    html += '</div>';
+                }
+                html += `
+                    <div class="tag-add-row">
+                        <input type="text" id="newTagInput" placeholder="输入新标签名称...">
+                        <button class="tag-add-btn" id="addTagBtn"><i class="fa-solid fa-plus"></i> 添加</button>
+                    </div>
+                `;
+                tagManagerBody.innerHTML = html;
+                tagManagerBody.querySelectorAll('.tag-manage-delete').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const label = btn.dataset.label;
+                        if (!confirm(`确定删除标签"${label}"吗？相关词条的标签也会移除。`)) return;
+                        const customLabels = loadCustomLabels().filter(l => l !== label);
+                        saveCustomLabels(customLabels);
+                        const tokenLabels = loadTokenLabels();
+                        for (const [token, labels] of Object.entries(tokenLabels)) {
+                            tokenLabels[token] = labels.filter(l => l !== label);
+                            if (tokenLabels[token].length === 0) delete tokenLabels[token];
+                        }
+                        saveTokenLabels(tokenLabels);
+                        const blockedLabels = loadBlockedLabels();
+                        delete blockedLabels[label];
+                        saveBlockedLabels(blockedLabels);
+                        openTagManager();
+                        renderTagFilterBar();
+                        renderTokenList();
+                        showToast(`已删除标签"${label}"`, 'success');
+                    });
+                });
+                const addBtn = document.getElementById('addTagBtn');
+                const input = document.getElementById('newTagInput');
+                const doAddTag = () => {
+                    const name = input.value.trim();
+                    if (!name) { showToast('请输入标签名称', 'error'); return; }
+                    const customLabels = loadCustomLabels();
+                    if (customLabels.includes(name)) { showToast('标签已存在', 'error'); return; }
+                    customLabels.push(name);
+                    saveCustomLabels(customLabels);
+                    openTagManager();
+                    renderTagFilterBar();
+                    showToast(`已添加标签"${name}"`, 'success');
+                };
+                addBtn.addEventListener('click', doAddTag);
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddTag(); });
+                tagManagerModal.classList.add('active');
+            }
+
+            function closeTagManager() { tagManagerModal.classList.remove('active'); }
+
+            // ==================== 标签选择器 ====================
+            function openTagSelectorForToken(token) {
+                tagSelectorTarget = token;
+                tagSelectorBatchTargets = null;
+                tagSelectorTitle.innerHTML = `<i class="fa-solid fa-tag"></i> 为 "${token}" 选择标签`;
+                renderTagSelector();
+                tagSelectorModal.classList.add('active');
+            }
+
+            function openTagSelectorForBatch() {
+                if (batchSelectedTokens.size === 0) { showToast('请先勾选词条', 'error'); return; }
+                tagSelectorTarget = null;
+                tagSelectorBatchTargets = Array.from(batchSelectedTokens);
+                tagSelectorTitle.innerHTML = `<i class="fa-solid fa-tag"></i> 为 ${batchSelectedTokens.size} 个词条批量选择标签`;
+                renderTagSelector();
+                tagSelectorModal.classList.add('active');
+            }
+
+            function renderTagSelector() {
+                const customLabels = loadCustomLabels();
+                const tokenLabels = loadTokenLabels();
+                let targetTokens = [];
+                if (tagSelectorTarget) targetTokens = [tagSelectorTarget];
+                if (tagSelectorBatchTargets) targetTokens = tagSelectorBatchTargets;
+                const existingLabels = new Set();
+                targetTokens.forEach(token => {
+                    (tokenLabels[token] || []).forEach(l => existingLabels.add(l));
+                });
+                if (customLabels.length === 0) {
+                    tagSelectorBody.innerHTML =
+                        '<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px;">暂无标签，请先在"标签管理"中创建</div>';
+                    return;
+                }
+                let html = '<div class="tag-selector-list">';
+                customLabels.forEach(label => {
+                    const isSelected = existingLabels.has(label);
+                    const color = getLabelColor(label);
+                    html +=
+                        `<span class="tag-selector-item ${isSelected ? 'selected' : ''}" data-label="${label}" style="${isSelected ? `border-color:${color};background:${color}15;color:${color};` : ''}"><span class="tag-dot" style="background:${color};"></span> ${label}</span>`;
+                });
+                html += '</div>';
+                html +=
+                    `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="copy-btn" id="tagSelectorCancelBtn">取消</button><button class="copy-btn positive-btn" id="tagSelectorConfirmBtn"><i class="fa-solid fa-check"></i> 确认</button></div>`;
+                tagSelectorBody.innerHTML = html;
+                let selectedLabels = new Set(existingLabels);
+                tagSelectorBody.querySelectorAll('.tag-selector-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const label = item.dataset.label;
+                        if (selectedLabels.has(label)) {
+                            selectedLabels.delete(label);
+                            item.classList.remove('selected');
+                            item.style.cssText = '';
+                        } else {
+                            selectedLabels.add(label);
+                            const color = getLabelColor(label);
+                            item.classList.add('selected');
+                            item.style.cssText =
+                                `border-color:${color};background:${color}15;color:${color};`;
+                        }
+                    });
+                });
+                document.getElementById('tagSelectorCancelBtn').addEventListener('click', () => {
+                    tagSelectorModal.classList.remove('active');
+                });
+                document.getElementById('tagSelectorConfirmBtn').addEventListener('click', () => {
+                    const labelsToApply = Array.from(selectedLabels);
+                    if (tagSelectorTarget) {
+                        // 单个词条
+                        const existing = getTokenLabels(tagSelectorTarget);
+                        existing.forEach(l => {
+                            if (!selectedLabels.has(l)) removeTokenLabel(tagSelectorTarget, l);
+                        });
+                        labelsToApply.forEach(l => addTokenLabel(tagSelectorTarget, l));
+                        showToast(`已更新 "${tagSelectorTarget}" 的标签`, 'success');
+                    }
+                    if (tagSelectorBatchTargets) {
+                        // 批量
+                        batchTagApply(tagSelectorBatchTargets, labelsToApply);
+                        showToast(`已为 ${tagSelectorBatchTargets.length} 个词条批量设置标签`, 'success');
+                    }
+                    tagSelectorModal.classList.remove('active');
+                    renderTagFilterBar();
+                    renderTokenList();
+                });
+            }
+
+            function batchTagApply(tokens, labels) {
+                // 批量设置：先移除所有现有标签，再添加选定标签（覆盖模式）
+                const tokenLabels = loadTokenLabels();
+                tokens.forEach(token => {
+                    tokenLabels[token] = [...labels];
+                    if (tokenLabels[token].length === 0) delete tokenLabels[token];
+                });
+                saveTokenLabels(tokenLabels);
+            }
+
+            function closeTagSelector() { tagSelectorModal.classList.remove('active'); }
+
+            // ==================== 屏蔽设置 ====================
+            function openBlockSettingsForToken(token) {
+                blockSettingsTarget = token;
+                const settings = loadBlockedTokens()[token] || { display: false, copy: false, diff: false };
+                blockSettingsTitle.innerHTML = `<i class="fa-solid fa-ban"></i> 屏蔽设置: "${token}"`;
+                blockSettingsBody.innerHTML = `
+                    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">选择要屏蔽的维度（勾选即屏蔽）:</p>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockDisplay" ${settings.display ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽展示</span><br><span class="block-desc">在词条库列表中隐藏该词条</span></div>
+                    </div>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockCopy" ${settings.copy ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽复制</span><br><span class="block-desc">复制提示词时排除该词条</span></div>
+                    </div>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockDiff" ${settings.diff ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽差异对比</span><br><span class="block-desc">在差异对比和相似度计算中忽略该词条</span></div>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                        <button class="copy-btn" id="blockResetBtn">重置</button>
+                        <button class="copy-btn positive-btn" id="blockSaveBtn"><i class="fa-solid fa-check"></i> 保存</button>
+                    </div>
+                `;
+                document.getElementById('blockResetBtn').addEventListener('click', () => {
+                    document.getElementById('blockDisplay').checked = false;
+                    document.getElementById('blockCopy').checked = false;
+                    document.getElementById('blockDiff').checked = false;
+                });
+                document.getElementById('blockSaveBtn').addEventListener('click', () => {
+                    const display = document.getElementById('blockDisplay').checked;
+                    const copy = document.getElementById('blockCopy').checked;
+                    const diff = document.getElementById('blockDiff').checked;
+                    const blockedTokens = loadBlockedTokens();
+                    if (display || copy || diff) {
+                        blockedTokens[token] = { display, copy, diff };
+                    } else {
+                        delete blockedTokens[token];
+                    }
+                    saveBlockedTokens(blockedTokens);
+                    blockSettingsModal.classList.remove('active');
+                    renderTokenList();
+                    showToast(`已更新 "${token}" 的屏蔽设置`, 'success');
+                });
+                blockSettingsModal.classList.add('active');
+            }
+
+            function closeBlockSettings() { blockSettingsModal.classList.remove('active'); }
+
+            // ==================== 标签级屏蔽 ====================
+            function openBlockSettingsForLabel(label) {
+                blockSettingsTarget = { type: 'label', label };
+                const settings = loadBlockedLabels()[label] || { display: false, copy: false, diff: false };
+                blockSettingsTitle.innerHTML = `<i class="fa-solid fa-ban"></i> 标签屏蔽设置: "${label}"`;
+                blockSettingsBody.innerHTML = `
+                    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">屏蔽该标签下所有词条（勾选即屏蔽）:</p>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockDisplay" ${settings.display ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽展示</span><br><span class="block-desc">在词条库列表中隐藏</span></div>
+                    </div>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockCopy" ${settings.copy ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽复制</span><br><span class="block-desc">复制提示词时排除</span></div>
+                    </div>
+                    <div class="block-settings-row">
+                        <input type="checkbox" id="blockDiff" ${settings.diff ? 'checked' : ''}>
+                        <div><span class="block-label">屏蔽差异对比</span><br><span class="block-desc">差异对比时忽略</span></div>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                        <button class="copy-btn" id="blockResetBtn">重置</button>
+                        <button class="copy-btn positive-btn" id="blockSaveBtn"><i class="fa-solid fa-check"></i> 保存</button>
+                    </div>
+                `;
+                document.getElementById('blockResetBtn').addEventListener('click', () => {
+                    document.getElementById('blockDisplay').checked = false;
+                    document.getElementById('blockCopy').checked = false;
+                    document.getElementById('blockDiff').checked = false;
+                });
+                document.getElementById('blockSaveBtn').addEventListener('click', () => {
+                    const display = document.getElementById('blockDisplay').checked;
+                    const copy = document.getElementById('blockCopy').checked;
+                    const diff = document.getElementById('blockDiff').checked;
+                    const blockedLabels = loadBlockedLabels();
+                    if (display || copy || diff) {
+                        blockedLabels[label] = { display, copy, diff };
+                    } else {
+                        delete blockedLabels[label];
+                    }
+                    saveBlockedLabels(blockedLabels);
+                    blockSettingsModal.classList.remove('active');
+                    renderTagFilterBar();
+                    renderTokenList();
+                    showToast(`已更新标签"${label}"的屏蔽设置`, 'success');
+                });
+                blockSettingsModal.classList.add('active');
+            }
+
+            function openSimilarity() {
+                if (allImages.length < 2) { showToast('至少需要2张图片', 'error'); return; }
+                similarityOverlay.classList.add('active');
+                renderSimilarityResults();
+            }
+
+            function closeSimilarity() { similarityOverlay.classList.remove('active'); }
+
+            function renderSimilarityResults() {
+                const threshold = parseFloat(thresholdSlider.value);
+                const excludeCommon = excludeCommonCheckbox.checked;
+                const results = calculateSimilarities(allImages, threshold, excludeCommon);
+                if (results.length === 0) { similarityResults.innerHTML =
+                        '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-check-circle" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>没有找到超过阈值的相似图片对</div>';
+                    return; }
+                similarityResults.innerHTML = '';
+                results.forEach(result => {
+                    const pair = document.createElement('div');
+                    pair.className = 'sim-pair';
+                    const isHigh = result.similarity >= 0.6;
+                    const imgA = result.imgA,
+                        imgB = result.imgB;
+                    const sameTokenSet = imgA.promptTokens.length === imgB.promptTokens.length && imgA.promptTokens
+                        .every(t => imgB.promptTokens.includes(t)) && imgA.negativeTokens.length === imgB
+                        .negativeTokens.length && imgA.negativeTokens.every(t => imgB.negativeTokens.includes(t));
+                    let hasWeightDiff = false;
+                    if (sameTokenSet) {
+                        const wa = { ...(imgA.promptWeights || {}), ...(imgA.negativeWeights || {}) };
+                        const wb = { ...(imgB.promptWeights || {}), ...(imgB.negativeWeights || {}) };
+                        const allToks = new Set([...Object.keys(wa), ...Object.keys(wb)]);
+                        allToks.forEach(tok => { if (Math.abs((wa[tok] ?? 1.0) - (wb[tok] ?? 1.0)) > 0.001)
+                            hasWeightDiff = true; });
+                    }
+                    pair.innerHTML = `
+                        <div class="sim-thumbs"><img src="${imgA.thumbnailDataURL}" data-id="${imgA.id}" title="${imgA.name}"><img src="${imgB.thumbnailDataURL}" data-id="${imgB.id}" title="${imgB.name}"></div>
+                        <div class="sim-info"><div class="sim-score ${isHigh ? 'high' : ''}"><i class="fa-solid ${isHigh ? 'fa-triangle-exclamation' : 'fa-chart-line'}"></i> 相似度: ${(result.similarity * 100).toFixed(1)}%</div><div class="sim-common-tokens">共同词条: ${result.commonTokens.slice(0,8).join(', ')}${result.commonTokens.length > 8 ? '...' : ''}</div></div>
+                        <div class="sim-actions">
+                            <button class="sim-action-btn diff-btn" data-a="${imgA.id}" data-b="${imgB.id}"><i class="fa-solid fa-code-compare"></i> 差异</button>
+                            ${hasWeightDiff ? `<button class="sim-action-btn weight-diff-btn" data-a="${imgA.id}" data-b="${imgB.id}"><i class="fa-solid fa-weight-scale"></i> 权重差异</button>` : ''}
+                            <button class="sim-action-btn delete" data-id="${imgA.id}"><i class="fa-solid fa-trash"></i> 左</button>
+                            <button class="sim-action-btn delete" data-id="${imgB.id}"><i class="fa-solid fa-trash"></i> 右</button>
+                        </div>
+                    `;
+                    pair.querySelector('.diff-btn').addEventListener('click', () => { const a = allImages.find(i => i
+                            .id === imgA.id); const b = allImages.find(i => i.id === imgB.id); if (a && b)
+                            openDiffModal(a, b); });
+                    if (hasWeightDiff) pair.querySelector('.weight-diff-btn').addEventListener('click', () => {
+                        const a = allImages.find(i => i.id === imgA.id); const b = allImages.find(i => i.id ===
+                            imgB.id); if (a && b) openWeightDiffModal(a, b); });
+                    pair.querySelectorAll('.sim-thumbs img').forEach(el => el.addEventListener('click', () =>
+                        openDetail(el.dataset.id)));
+                    pair.querySelectorAll('.sim-action-btn.delete').forEach(btn => btn.addEventListener('click',
+                        () => { deleteImage(btn.dataset.id);
+                            setTimeout(renderSimilarityResults, 300); }));
+                    similarityResults.appendChild(pair);
+                });
+            }
+
+            function toggleSelectionMode() {
+                selectionMode = !selectionMode;
+                selectedIds.clear();
+                downloadActions.classList.toggle('active', selectionMode);
+                renderGallery();
+            }
+
+            selectAllBtn.addEventListener('click', () => {
+                filteredImages.forEach(img => selectedIds.add(img.id));
+                renderGallery();
+            });
+            deselectAllBtn.addEventListener('click', () => {
+                selectedIds.clear();
+                renderGallery();
+            });
+            selectRangeBtn.addEventListener('click', () => {
+                const selectedArray = Array.from(selectedIds);
+                if (selectedArray.length < 2) { showToast('请先选中至少两张图片作为端点', 'error'); return; }
+                const indices = selectedArray.map(id => filteredImages.findIndex(img => img.id === id)).filter(idx =>
+                    idx !== -1);
+                if (indices.length < 2) { showToast('部分选中图片不在当前筛选结果中', 'error'); return; }
+                const minIdx = Math.min(...indices);
+                const maxIdx = Math.max(...indices);
+                for (let i = minIdx; i <= maxIdx; i++) selectedIds.add(filteredImages[i].id);
+                renderGallery();
+                showToast(`已选中区间内 ${maxIdx - minIdx + 1} 张图片`, 'success');
+            });
+            invertSelectionBtn.addEventListener('click', () => {
+                filteredImages.forEach(img => {
+                    if (selectedIds.has(img.id)) selectedIds.delete(img.id);
+                    else selectedIds.add(img.id);
+                });
+                renderGallery();
+            });
+
+            function downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+
+            async function downloadSelected(withMeta) {
+                if (selectedIds.size === 0) { showToast('请先选择图片', 'error'); return; }
+                const images = allImages.filter(img => selectedIds.has(img.id));
+                for (const img of images) {
+                    try {
+                        if (withMeta) downloadBlob(img.fileBlob, img.name);
+                        else {
+                            if (img.fileBlob.type === 'image/png') {
+                                const noMetaBlob = await removePNGMetadata(img.fileBlob);
+                                downloadBlob(noMetaBlob, img.name);
+                            } else downloadBlob(img.fileBlob, img.name);
+                        }
+                    } catch (e) { showToast(`下载 ${img.name} 失败`, 'error'); }
+                }
+                showToast(`已开始下载 ${images.length} 张图片`, 'success');
+            }
+
+            // ==================== 事件绑定 ====================
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            uploadHintBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFiles(e.target.files);
+                fileInput.value = ''; });
+            document.getElementById('gallery').addEventListener('dragover', (e) => { e.preventDefault(); e
+                    .currentTarget.style.backgroundColor = '#eef1ff'; });
+            document.getElementById('gallery').addEventListener('dragleave', (e) => { e.preventDefault(); e
+                    .currentTarget.style.backgroundColor = ''; });
+            document.getElementById('gallery').addEventListener('drop', (e) => { e.preventDefault(); e.currentTarget
+                    .style.backgroundColor = ''; if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+
+            clearFilterBtn.addEventListener('click', clearAllFilters);
+            modalCloseBtn.addEventListener('click', closeDetail);
+            detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetail(); });
+            diffModalCloseBtn.addEventListener('click', closeDiffModal);
+            diffModal.addEventListener('click', (e) => { if (e.target === diffModal) closeDiffModal(); });
+            weightDiffCloseBtn.addEventListener('click', closeWeightDiffModal);
+            weightDiffModal.addEventListener('click', (e) => { if (e.target === weightDiffModal) closeWeightDiffModal(); });
+
+            tagManagerCloseBtn.addEventListener('click', closeTagManager);
+            tagManagerModal.addEventListener('click', (e) => { if (e.target === tagManagerModal) closeTagManager(); });
+            tagSelectorCloseBtn.addEventListener('click', closeTagSelector);
+            tagSelectorModal.addEventListener('click', (e) => { if (e.target === tagSelectorModal) closeTagSelector(); });
+            blockSettingsCloseBtn.addEventListener('click', closeBlockSettings);
+            blockSettingsModal.addEventListener('click', (e) => { if (e.target === blockSettingsModal)
+                closeBlockSettings(); });
+
+            tokenLibraryBtn.addEventListener('click', openTokenSidebar);
+            tokenSidebarClose.addEventListener('click', closeTokenSidebar);
+            tabPositive.addEventListener('click', () => { currentTokenTab = 'positive';
+                tabPositive.classList.add('active');
+                tabNegative.classList.remove('active');
+                renderTagFilterBar();
+                renderTokenList(); if (currentTokenDetail?.type === 'positive') renderWeightBar(currentTokenDetail
+                    .token, 'positive'); });
+            tabNegative.addEventListener('click', () => { currentTokenTab = 'negative';
+                tabNegative.classList.add('active');
+                tabPositive.classList.remove('active');
+                renderTagFilterBar();
+                renderTokenList(); if (currentTokenDetail?.type === 'negative') renderWeightBar(currentTokenDetail
+                    .token, 'negative'); });
+            tokenSearchInput.addEventListener('input', renderTokenList);
+
+            tagManageBtn.addEventListener('click', openTagManager);
+            batchLabelBtn.addEventListener('click', toggleBatchLabelMode);
+            batchSelectAllBtn.addEventListener('click', () => {
+                const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
+                const tokenLabels = loadTokenLabels();
+                let entries = Object.entries(stats);
+                if (activeTagFilters.length > 0) {
+                    entries = entries.filter(([token]) => {
+                        const labels = tokenLabels[token] || [];
+                        return activeTagFilters.every(l => labels.includes(l));
+                    });
+                }
+                const searchTerm = tokenSearchInput.value.trim().toLowerCase();
+                if (searchTerm) {
+                    entries = entries.filter(([token]) => {
+                        const labels = tokenLabels[token] || [];
+                        return token.toLowerCase().includes(searchTerm) || labels.some(l => l.toLowerCase().includes(
+                            searchTerm));
+                    });
+                }
+                entries.forEach(([token]) => batchSelectedTokens.add(token));
+                renderTokenList();
+            });
+            batchDeselectAllBtn.addEventListener('click', () => {
+                batchSelectedTokens.clear();
+                renderTokenList();
+            });
+            batchApplyLabelBtn.addEventListener('click', openTagSelectorForBatch);
+
+            similarityBtn.addEventListener('click', openSimilarity);
+            similarityCloseBtn.addEventListener('click', closeSimilarity);
+            similarityOverlay.addEventListener('click', (e) => { if (e.target === similarityOverlay) closeSimilarity(); });
+            thresholdSlider.addEventListener('input', () => { thresholdValue.textContent = parseFloat(thresholdSlider
+                    .value).toFixed(2);
+                renderSimilarityResults(); });
+            excludeCommonCheckbox.addEventListener('change', renderSimilarityResults);
+
+            downloadModeBtn.addEventListener('click', toggleSelectionMode);
+            downloadWithMetaBtn.addEventListener('click', () => downloadSelected(true));
+            downloadNoMetaBtn.addEventListener('click', () => downloadSelected(false));
+            deleteSelectedBtn.addEventListener('click', deleteSelectedImages);
+            deleteDuplicatesBtn.addEventListener('click', deleteDuplicateImages);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (detailModal.classList.contains('active')) closeDetail();
+                    if (diffModal.classList.contains('active')) closeDiffModal();
+                    if (weightDiffModal.classList.contains('active')) closeWeightDiffModal();
+                    if (similarityOverlay.classList.contains('active')) closeSimilarity();
+                    if (tokenSidebar.classList.contains('active')) closeTokenSidebar();
+                    if (tagManagerModal.classList.contains('active')) closeTagManager();
+                    if (tagSelectorModal.classList.contains('active')) closeTagSelector();
+                    if (blockSettingsModal.classList.contains('active')) closeBlockSettings();
+                }
+            });
+
+            // ==================== 删除重复图片 ====================
+            async function deleteDuplicateImages() {
+                const groups = new Map();
+                allImages.forEach(img => {
+                    const key = JSON.stringify({ p: img.prompt, n: img.negativePrompt, seed: img.seed,
+                        steps: img.steps, sampler: img.sampler, scale: img.scale });
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(img);
+                });
+                let deleteCount = 0;
+                groups.forEach(imgs => { if (imgs.length > 1) deleteCount += imgs.length - 1; });
+                if (deleteCount === 0) { showToast('没有发现重复元数据图片', 'info'); return; }
+                if (!confirm(`发现 ${deleteCount} 张重复图片，将删除重复项（保留每组最早一张），确定？`)) return;
+                let deleted = 0;
+                for (const imgs of groups.values()) {
+                    if (imgs.length > 1) {
+                        imgs.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                        for (const img of imgs.slice(1)) {
+                            try { await dbDeleteImage(img.id);
+                                deleted++; } catch (e) { console.error(e); }
+                        }
+                    }
+                }
+                showToast(`已删除 ${deleted} 张重复图片`, 'success');
+                await loadAllImages();
+            }
+
+            // ==================== 初始化 ====================
+            (async function init() {
+                await loadAllImages();
+                if (allImages.length > 0) { galleryEmpty.style.display = 'none';
+                    galleryGrid.style.display = 'grid'; }
+            })().catch(err => { console.error(err);
+                showToast('初始化失败', 'error'); });
+        })();
+    </script>
+</body>
+</html>
