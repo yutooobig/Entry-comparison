@@ -6,6 +6,7 @@
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        /* === 原有样式保持不变 === */
         :root {
             --bg: #f5f6fa;
             --card-bg: #ffffff;
@@ -951,7 +952,6 @@
             font-size: 13px;
         }
 
-        /* 新增：标签筛选栏 */
         .tag-filter-bar {
             display: flex;
             gap: 6px;
@@ -1002,7 +1002,6 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* 新增：词条库工具栏 */
         .token-toolbar {
             display: flex;
             gap: 6px;
@@ -1040,7 +1039,6 @@
             border-color: var(--warning);
         }
 
-        /* 批量操作栏 */
         .batch-action-bar {
             display: none;
             gap: 6px;
@@ -1086,7 +1084,6 @@
             margin-left: auto;
         }
 
-        /* 标签选择器模态框 */
         .tag-selector-list {
             display: flex;
             flex-wrap: wrap;
@@ -1124,7 +1121,6 @@
             flex-shrink: 0;
         }
 
-        /* 标签管理列表 */
         .tag-manage-list {
             display: flex;
             flex-direction: column;
@@ -1171,6 +1167,23 @@
             color: var(--danger);
             background: #fdf0ef;
         }
+        /* 新增：标签屏蔽按钮 */
+        .tag-manage-item .tag-manage-block {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .tag-manage-item .tag-manage-block:hover {
+            color: var(--warning);
+            background: #fff8e1;
+        }
+
         .tag-add-row {
             display: flex;
             gap: 8px;
@@ -1207,7 +1220,6 @@
             background: var(--primary-hover);
         }
 
-        /* 屏蔽设置选项 */
         .block-settings-row {
             display: flex;
             align-items: center;
@@ -3172,6 +3184,7 @@
                                 <span class="tag-manage-name"><span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;"></span> ${label}</span>
                                 <span class="tag-manage-count">${count} 词条</span>
                                 ${isBlocked ? '<span style="font-size:10px;color:var(--danger);">🚫</span>' : ''}
+                                <button class="tag-manage-block" data-label="${label}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
                                 <button class="tag-manage-delete" data-label="${label}" title="删除标签"><i class="fa-solid fa-trash"></i></button>
                             </div>`;
                     });
@@ -3184,6 +3197,14 @@
                     </div>
                 `;
                 tagManagerBody.innerHTML = html;
+                // 绑定屏蔽设置按钮
+                tagManagerBody.querySelectorAll('.tag-manage-block').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const label = btn.dataset.label;
+                        openBlockSettingsForLabel(label);
+                    });
+                });
+                // 绑定删除按钮
                 tagManagerBody.querySelectorAll('.tag-manage-delete').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const label = btn.dataset.label;
@@ -3370,9 +3391,7 @@
                 blockSettingsModal.classList.add('active');
             }
 
-            function closeBlockSettings() { blockSettingsModal.classList.remove('active'); }
-
-            // ==================== 标签级屏蔽 ====================
+            // 新增：标签级屏蔽
             function openBlockSettingsForLabel(label) {
                 blockSettingsTarget = { type: 'label', label };
                 const settings = loadBlockedLabels()[label] || { display: false, copy: false, diff: false };
@@ -3413,12 +3432,16 @@
                     }
                     saveBlockedLabels(blockedLabels);
                     blockSettingsModal.classList.remove('active');
+                    // 刷新标签管理列表和词条列表
+                    openTagManager(); // 重新打开标签管理模态框以更新状态
                     renderTagFilterBar();
                     renderTokenList();
                     showToast(`已更新标签"${label}"的屏蔽设置`, 'success');
                 });
                 blockSettingsModal.classList.add('active');
             }
+
+            function closeBlockSettings() { blockSettingsModal.classList.remove('active'); }
 
             function openSimilarity() {
                 if (allImages.length < 2) { showToast('至少需要2张图片', 'error'); return; }
