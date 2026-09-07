@@ -1142,6 +1142,43 @@
             max-height: 250px;
             overflow-y: auto;
         }
+        
+        /* === 新增的标签管理批量操作样式 === */
+.tag-manage-batch-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+}
+.tag-manage-batch-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.tag-manage-batch-btn:hover:not(:disabled) { background: #f0f2f5; }
+.tag-manage-batch-btn.danger { color: var(--danger); border-color: var(--danger); }
+.tag-manage-batch-btn.danger:hover:not(:disabled) { background: #fdf0ef; }
+.tag-manage-batch-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: var(--border); color: var(--text-secondary); }
+.tag-manage-item-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tag-manage-checkbox {
+    accent-color: var(--primary);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+
         .tag-manage-item {
             display: flex;
             align-items: center;
@@ -1918,7 +1955,6 @@
     <div class="toast-container" id="toastContainer"></div>
     <input type="file" id="fileInput" accept="image/*" multiple>
 
-    <!-- 动态更新 header 高度，确保 sticky 定位正确 -->
     <script>
         (function() {
             function updateHeaderHeight() {
@@ -3365,15 +3401,28 @@
         }
     }
 
-    // ==================== 标签管理模态框 ====================
+       // ==================== 标签管理模态框 ====================
     function openTagManager() {
         const customLabels = loadCustomLabels();
         const tokenLabels = loadTokenLabels();
         const blockedLabels = loadBlockedLabels();
+        let selectedTagsForBatch = new Set(); // 记录当前勾选的标签
+
         let html = '';
         if (customLabels.length === 0) {
             html += '<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px;">暂无标签，请添加</div>';
         } else {
+            // 批量操作栏
+            html += `
+                <div class="tag-manage-batch-bar">
+                    <label style="font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="tagManageSelectAll" class="tag-manage-checkbox"> 全选
+                    </label>
+                    <button class="tag-manage-batch-btn danger" id="tagManageBatchDeleteBtn" disabled>
+                        <i class="fa-solid fa-trash"></i> 批量删除
+                    </button>
+                </div>
+            `;
             html += '<div class="tag-manage-list">';
             customLabels.forEach(label => {
                 const count = Object.entries(tokenLabels).filter(([t, labels]) => labels.includes(label)).length;
@@ -3381,66 +3430,130 @@
                 const color = getLabelColor(label);
                 html += `
                     <div class="tag-manage-item">
-                        <span class="tag-manage-name"><span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;"></span> ${label}</span>
-                        <span class="tag-manage-count">${count} 词条</span>
-                        ${isBlocked ? '<span style="font-size:10px;color:var(--danger);">🚫</span>' : ''}
-                        <button class="tag-manage-block" data-label="${label}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
-                        <button class="tag-manage-delete" data-label="${label}" title="删除标签"><i class="fa-solid fa-trash"></i></button>
+                        <div class="tag-manage-item-left">
+                            <input type="checkbox" class="tag-manage-checkbox item-checkbox" data-label="${label}">
+                            <span class="tag-manage-name"><span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;"></span> ${label}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="tag-manage-count">${count} 词条</span>
+                            ${isBlocked ? '<span style="font-size:10px;color:var(--danger);">🚫</span>' : ''}
+                            <button class="tag-manage-block" data-label="${label}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
+                            <button class="tag-manage-delete" data-label="${label}" title="删除标签"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     </div>`;
             });
             html += '</div>';
         }
         html += `
-            <div class="tag-add-row">
+            <div class="tag-add-row" style="margin-top: 12px;">
                 <input type="text" id="newTagInput" placeholder="输入新标签名称...">
                 <button class="tag-add-btn" id="addTagBtn"><i class="fa-solid fa-plus"></i> 添加</button>
             </div>
         `;
         tagManagerBody.innerHTML = html;
+
+        // 绑定屏蔽设置按钮
         tagManagerBody.querySelectorAll('.tag-manage-block').forEach(btn => {
             btn.addEventListener('click', () => {
                 const label = btn.dataset.label;
                 openBlockSettingsForLabel(label);
             });
         });
+
+        // 通用删除逻辑 (支持单体和批量)
+        const deleteLabels = (labelsToDelete) => {
+            if (labelsToDelete.length === 0) return;
+            const msg = labelsToDelete.length === 1
+                ? `确定删除标签"${labelsToDelete[0]}"吗？相关词条的标签也会移除。`
+                : `确定要删除选定的 ${labelsToDelete.length} 个标签吗？相关词条的标签也会移除。`;
+            if (!confirm(msg)) return;
+
+            // 删除自定义标签库
+            let updatedLabels = loadCustomLabels().filter(l => !labelsToDelete.includes(l));
+            saveCustomLabels(updatedLabels);
+
+            // 删除词条身上的该标签
+            const tkLabels = loadTokenLabels();
+            for (const [token, labelsArray] of Object.entries(tkLabels)) {
+                tkLabels[token] = labelsArray.filter(l => !labelsToDelete.includes(l));
+                if (tkLabels[token].length === 0) delete tkLabels[token];
+            }
+            saveTokenLabels(tkLabels);
+
+            // 删除标签的屏蔽设置
+            const blkLabels = loadBlockedLabels();
+            labelsToDelete.forEach(l => delete blkLabels[l]);
+            saveBlockedLabels(blkLabels);
+
+            openTagManager(); // 重新渲染弹窗
+            renderTagFilterBar();
+            renderTokenList();
+            showToast(labelsToDelete.length === 1 ? `已删除标签"${labelsToDelete[0]}"` : `已批量删除 ${labelsToDelete.length} 个标签`, 'success');
+        };
+
+        // 绑定单体删除按钮
         tagManagerBody.querySelectorAll('.tag-manage-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const label = btn.dataset.label;
-                if (!confirm(`确定删除标签"${label}"吗？相关词条的标签也会移除。`)) return;
-                const customLabels = loadCustomLabels().filter(l => l !== label);
-                saveCustomLabels(customLabels);
-                const tokenLabels = loadTokenLabels();
-                for (const [token, labels] of Object.entries(tokenLabels)) {
-                    tokenLabels[token] = labels.filter(l => l !== label);
-                    if (tokenLabels[token].length === 0) delete tokenLabels[token];
-                }
-                saveTokenLabels(tokenLabels);
-                const blockedLabels = loadBlockedLabels();
-                delete blockedLabels[label];
-                saveBlockedLabels(blockedLabels);
-                openTagManager();
-                renderTagFilterBar();
-                renderTokenList();
-                showToast(`已删除标签"${label}"`, 'success');
-            });
+            btn.addEventListener('click', () => deleteLabels([btn.dataset.label]));
         });
+
+        // 绑定批量操作逻辑
+        if (customLabels.length > 0) {
+            const selectAllCb = document.getElementById('tagManageSelectAll');
+            const batchDeleteBtn = document.getElementById('tagManageBatchDeleteBtn');
+            const itemCheckboxes = tagManagerBody.querySelectorAll('.item-checkbox');
+
+            const updateBatchUI = () => {
+                batchDeleteBtn.disabled = selectedTagsForBatch.size === 0;
+                batchDeleteBtn.innerHTML = `<i class="fa-solid fa-trash"></i> 批量删除 (${selectedTagsForBatch.size})`;
+                selectAllCb.checked = selectedTagsForBatch.size === itemCheckboxes.length && itemCheckboxes.length > 0;
+            };
+
+            // 单个复选框改变
+            itemCheckboxes.forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const label = e.target.dataset.label;
+                    if (e.target.checked) selectedTagsForBatch.add(label);
+                    else selectedTagsForBatch.delete(label);
+                    updateBatchUI();
+                });
+            });
+
+            // 全选复选框改变
+            selectAllCb.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    itemCheckboxes.forEach(cb => { cb.checked = true; selectedTagsForBatch.add(cb.dataset.label); });
+                } else {
+                    itemCheckboxes.forEach(cb => { cb.checked = false; selectedTagsForBatch.clear(); });
+                }
+                updateBatchUI();
+            });
+
+            // 批量删除按钮点击
+            batchDeleteBtn.addEventListener('click', () => {
+                deleteLabels(Array.from(selectedTagsForBatch));
+            });
+        }
+
+        // 添加新标签逻辑
         const addBtn = document.getElementById('addTagBtn');
         const input = document.getElementById('newTagInput');
         const doAddTag = () => {
             const name = input.value.trim();
             if (!name) { showToast('请输入标签名称', 'error'); return; }
-            const customLabels = loadCustomLabels();
-            if (customLabels.includes(name)) { showToast('标签已存在', 'error'); return; }
-            customLabels.push(name);
-            saveCustomLabels(customLabels);
+            const currentLabels = loadCustomLabels();
+            if (currentLabels.includes(name)) { showToast('标签已存在', 'error'); return; }
+            currentLabels.push(name);
+            saveCustomLabels(currentLabels);
             openTagManager();
             renderTagFilterBar();
             showToast(`已添加标签"${name}"`, 'success');
         };
         addBtn.addEventListener('click', doAddTag);
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddTag(); });
+
         tagManagerModal.classList.add('active');
     }
+
 
     function closeTagManager() { tagManagerModal.classList.remove('active'); }
 
@@ -3861,16 +3974,20 @@
         }
 
         const typeName = currentTokenTab === 'positive' ? '正向' : '负向';
-        const promptTemplate = `请帮我将以下 ${tokens.length} 个英文 ${typeName} 提示词进行翻译和分类。
-分类标签可包括但不限于：画师、质量词、画风、场景、绘画主体、动作、物品、光影等。
-请严格按照以下 JSON 格式输出，不要包含任何额外的文字说明和包裹代码块标识：
+        const promptTemplate = `# 任务请求
+        
+帮我将以下 ${tokens.length} 个英文 ${typeName} 提示词进行翻译和分类。
+分类标签可包括但不限于：画师、质量词、场景、主体、动作、物品、光影、构图等粗颗粒度分类，不要过于细分零碎。
+请严格按照以下 JSON 格式输出，不要包含任何额外的文字说明：
 
+```json
 {
   "token1": {
     "translation": "词条翻译",
     "labels": ["标签1", "标签2"]
   }
 }
+```
 
 以下是需要处理的词条列表：
 ${tokens.join('\n')}
