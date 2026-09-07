@@ -2752,9 +2752,7 @@
     }
 
     function setWeightFilter(token, type, weight) {
-        activeFilters = activeFilters.filter(f => !(f
-
-.token === token && f.type === type));
+        activeFilters = activeFilters.filter(f => !(f.token === token && f.type === type));
         if (weight !== null && weight !== undefined) {
             activeFilters.push({ token, type, weight });
         } else {
