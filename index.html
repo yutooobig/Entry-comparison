@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+    <!-- 添加到主屏幕全屏支持 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -11,7 +11,7 @@
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-
+        /* === 原有样式保持不变 === */
         :root {
             --bg: #f5f6fa;
             --card-bg: #ffffff;
@@ -1933,7 +1933,10 @@
             // 初始执行一次
             updateHeaderHeight();
         })();
-        
+    </script>
+
+    <script>
+(function() {
     // ==================== 数据库操作 ====================
     const DB_NAME = 'pngGalleryDB';
     const DB_VERSION = 1;
@@ -1992,6 +1995,7 @@
             }).catch(reject);
         });
     }
+        
 
     // ==================== PNG 元数据解析 ====================
     function parsePNGMetadata(arrayBuffer) {
