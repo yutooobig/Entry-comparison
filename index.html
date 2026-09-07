@@ -1831,18 +1831,21 @@
         <div class="token-search"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="tokenSearchInput" placeholder="搜索词条..."></div>
         <div class="tag-filter-bar" id="tagFilterBar"></div>
         <div class="token-toolbar" id="tokenToolbar">
-    <button class="toolbar-btn tag-manage-btn" id="tagManageBtn"><i class="fa-solid fa-tags"></i> 标签管理</button>
-    <button class="toolbar-btn" id="batchLabelBtn"><i class="fa-solid fa-object-group"></i> 批量标注</button>
-    <!-- 新增按钮 -->
-    <button class="toolbar-btn" id="exportTokensBtn"><i class="fa-solid fa-file-export"></i> 导出词条</button>
-    <button class="toolbar-btn" id="importLabelsBtn"><i class="fa-solid fa-file-import"></i> 导入标签</button>
-</div>
-       <div class="token-tabs">
-    <button class="token-tab active" data-tab="positive" id="tabPositive"><i class="fa-solid fa-plus-circle"></i> 正向词</button>
-    <button class="token-tab" data-tab="negative" id="tabNegative"><i class="fa-solid fa-minus-circle"></i> 负向词</button>
-    <!-- 新增 -->
-    <button class="token-tab" data-tab="blocked" id="tabBlocked"><i class="fa-solid fa-ban"></i> 已屏蔽</button>
-</div>
+            <button class="toolbar-btn tag-manage-btn" id="tagManageBtn"><i class="fa-solid fa-tags"></i> 标签管理</button>
+            <button class="toolbar-btn" id="batchLabelBtn"><i class="fa-solid fa-object-group"></i> 批量标注</button>
+            <!-- 新增按钮 -->
+            <button class="toolbar-btn" id="exportTokensBtn"><i class="fa-solid fa-file-export"></i> 导出词条</button>
+            <button class="toolbar-btn" id="importLabelsBtn"><i class="fa-solid fa-file-import"></i> 导入标签</button>
+            <!-- 新增翻译按钮 -->
+            <button class="toolbar-btn" id="exportTranslateBtn"><i class="fa-solid fa-language"></i> 导出翻译</button>
+            <button class="toolbar-btn" id="importTranslateBtn"><i class="fa-solid fa-file-import"></i> 导入翻译</button>
+        </div>
+        <div class="token-tabs">
+            <button class="token-tab active" data-tab="positive" id="tabPositive"><i class="fa-solid fa-plus-circle"></i> 正向词</button>
+            <button class="token-tab" data-tab="negative" id="tabNegative"><i class="fa-solid fa-minus-circle"></i> 负向词</button>
+            <!-- 新增 -->
+            <button class="token-tab" data-tab="blocked" id="tabBlocked"><i class="fa-solid fa-ban"></i> 已屏蔽</button>
+        </div>
         <div class="token-weight-bar" id="tokenWeightBar" style="display:none;"></div>
         <div class="token-list" id="tokenList"></div>
         <div class="batch-action-bar" id="batchActionBar">
@@ -2095,6 +2098,9 @@
     const LS_TOKEN_LABELS = LS_PREFIX + 'tokenLabels';
     const LS_BLOCKED_TOKENS = LS_PREFIX + 'blockedTokens';
     const LS_BLOCKED_LABELS = LS_PREFIX + 'blockedLabels';
+    // 新增翻译存储键
+    const LS_TRANSLATIONS_POS = LS_PREFIX + 'translationsPositive';
+    const LS_TRANSLATIONS_NEG = LS_PREFIX + 'translationsNegative';
 
     function loadCustomLabels() {
         try { return JSON.parse(localStorage.getItem(LS_CUSTOM_LABELS)) || []; } catch (e) { return []; }
@@ -2126,6 +2132,20 @@
 
     function saveBlockedLabels(data) {
         localStorage.setItem(LS_BLOCKED_LABELS, JSON.stringify(data));
+    }
+
+    // 新增翻译读写
+    function loadTranslationsPositive() {
+        try { return JSON.parse(localStorage.getItem(LS_TRANSLATIONS_POS)) || {}; } catch (e) { return {}; }
+    }
+    function saveTranslationsPositive(data) {
+        localStorage.setItem(LS_TRANSLATIONS_POS, JSON.stringify(data));
+    }
+    function loadTranslationsNegative() {
+        try { return JSON.parse(localStorage.getItem(LS_TRANSLATIONS_NEG)) || {}; } catch (e) { return {}; }
+    }
+    function saveTranslationsNegative(data) {
+        localStorage.setItem(LS_TRANSLATIONS_NEG, JSON.stringify(data));
     }
 
     // 标签颜色分配
@@ -2432,7 +2452,7 @@
     const tokenSearchInput = document.getElementById('tokenSearchInput');
     const tabPositive = document.getElementById('tabPositive');
     const tabNegative = document.getElementById('tabNegative');
-    const tabBlocked = document.getElementById('tabBlocked'); // 新增
+    const tabBlocked = document.getElementById('tabBlocked');
     const tokenWeightBar = document.getElementById('tokenWeightBar');
     const tagFilterBar = document.getElementById('tagFilterBar');
     const tokenToolbar = document.getElementById('tokenToolbar');
@@ -2473,6 +2493,9 @@
     const blockSettingsCloseBtn = document.getElementById('blockSettingsCloseBtn');
     const blockSettingsTitle = document.getElementById('blockSettingsTitle');
     const blockSettingsBody = document.getElementById('blockSettingsBody');
+    // 新增翻译按钮引用
+    const exportTranslateBtn = document.getElementById('exportTranslateBtn');
+    const importTranslateBtn = document.getElementById('importTranslateBtn');
 
     // ==================== 辅助函数 ====================
     function showToast(message, type = 'info') {
@@ -2933,7 +2956,6 @@
 
     // ==================== 标签筛选栏 ====================
     function renderTagFilterBar() {
-        // 如果当前是“已屏蔽”视图，隐藏标签筛选栏
         if (currentTokenTab === 'blocked') {
             tagFilterBar.style.display = 'none';
             return;
@@ -2973,7 +2995,6 @@
 
     // ==================== 词条列表渲染 ====================
     function renderTokenList() {
-        // 如果处于已屏蔽视图，特殊处理
         if (currentTokenTab === 'blocked') {
             renderBlockedTokenList();
             return;
@@ -2983,9 +3004,9 @@
         const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
         const tokenLabels = loadTokenLabels();
         const blockedTokensData = loadBlockedTokens();
+        const translations = currentTokenTab === 'positive' ? loadTranslationsPositive() : loadTranslationsNegative();
         let entries = Object.entries(stats).sort((a, b) => b[1] - a[1]);
 
-        // 应用标签筛选
         if (activeTagFilters.length > 0) {
             entries = entries.filter(([token]) => {
                 const labels = tokenLabels[token] || [];
@@ -2993,7 +3014,6 @@
             });
         }
 
-        // 应用搜索
         if (searchTerm) {
             entries = entries.filter(([token]) => {
                 const labels = tokenLabels[token] || [];
@@ -3001,7 +3021,6 @@
             });
         }
 
-        // 过滤被屏蔽展示的词条（批量标注模式下不过滤，方便管理）
         if (!batchLabelMode) {
             entries = entries.filter(([token]) => {
                 const settings = getEffectiveBlockSettings(token);
@@ -3026,6 +3045,7 @@
             const isBlockedDiff = blockSettings.diff;
             const isBatchSelected = batchSelectedTokens.has(token);
             const isCheckedInBatch = batchLabelMode && isBatchSelected;
+            const translation = translations[token] || '';
 
             let labelsHtml = '';
             if (labels.length > 0) {
@@ -3043,9 +3063,12 @@
             const blockIndicator = (isBlockedDisplay || isBlockedCopy || isBlockedDiff) ?
                 `<span title="已屏蔽: ${isBlockedDisplay?'展示 ':''}${isBlockedCopy?'复制 ':''}${isBlockedDiff?'差异':''}" style="font-size:10px;color:var(--danger);">🚫</span>` : '';
 
+            const translationHtml = translation ? `<span class="token-translation" title="翻译">${translation}</span>` : '';
+
             item.innerHTML = `
                 <input type="checkbox" class="token-checkbox ${batchLabelMode ? 'show' : ''}" data-token="${token}" ${isCheckedInBatch ? 'checked' : ''}>
                 <span class="token-name" data-token="${token}">${token}</span>
+                ${translationHtml}
                 ${labelsHtml}
                 ${blockIndicator}
                 <span class="token-count ${countClass}">${count} 次</span>
@@ -3083,7 +3106,6 @@
                 openBlockSettingsForToken(token);
             });
 
-            // 标签徽章点击筛选
             item.querySelectorAll('.tag-badge[data-label]').forEach(badge => {
                 badge.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -3110,10 +3132,8 @@
         const blockedTokensData = loadBlockedTokens();
         const blockedLabels = loadBlockedLabels();
 
-        // 收集所有被展示屏蔽的词条（来自词条级或标签级）
-        const blockedMap = new Map(); // token -> { type: 'positive'|'negative', source: 'token'|'label', labelName? }
+        const blockedMap = new Map();
 
-        // 从词条级屏蔽中收集
         for (const [token, settings] of Object.entries(blockedTokensData)) {
             if (settings.display) {
                 const type = tokenStats.positive[token] ? 'positive' : (tokenStats.negative[token] ? 'negative' : null);
@@ -3123,7 +3143,6 @@
             }
         }
 
-        // 从标签级屏蔽中收集
         for (const [label, settings] of Object.entries(blockedLabels)) {
             if (!settings.display) continue;
             for (const [token, labels] of Object.entries(tokenLabels)) {
@@ -3139,7 +3158,6 @@
             }
         }
 
-        // 过滤搜索
         let entries = Array.from(blockedMap.entries());
         if (searchTerm) {
             entries = entries.filter(([token]) => token.toLowerCase().includes(searchTerm) || (tokenLabels[token] || []).some(l => l.toLowerCase().includes(searchTerm)));
@@ -3175,13 +3193,11 @@
                 <button class="token-action-btn unblock-btn" data-token="${token}" title="取消屏蔽"><i class="fa-solid fa-eye"></i></button>
             `;
 
-            // 点击词条名可查看权重分布
             item.querySelector('.token-name').addEventListener('click', () => {
                 currentTokenDetail = { token, type: info.type };
                 renderWeightBar(token, info.type);
             });
 
-            // 取消屏蔽按钮
             item.querySelector('.unblock-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 unblockToken(token, info);
@@ -3191,7 +3207,6 @@
         });
     }
 
-    // 取消词条的展示屏蔽（覆盖词条级设置）
     function unblockToken(token, info) {
         const blockedTokens = loadBlockedTokens();
         if (blockedTokens[token]) {
@@ -3200,7 +3215,6 @@
                 delete blockedTokens[token];
             }
         } else {
-            // 如果没有词条级设置，但被标签级屏蔽，则创建一个词条级覆盖 display:false
             blockedTokens[token] = { display: false, copy: false, diff: false };
         }
         saveBlockedTokens(blockedTokens);
@@ -3671,36 +3685,27 @@
     tokenLibraryBtn.addEventListener('click', openTokenSidebar);
     tokenSidebarClose.addEventListener('click', closeTokenSidebar);
 
-    // 使用统一的标签切换函数
     tabPositive.addEventListener('click', () => switchTokenTab('positive'));
     tabNegative.addEventListener('click', () => switchTokenTab('negative'));
     tabBlocked.addEventListener('click', () => switchTokenTab('blocked'));
 
     function switchTokenTab(tab) {
         currentTokenTab = tab;
-        // 更新按钮激活状态
         document.querySelectorAll('.token-tab').forEach(btn => btn.classList.remove('active'));
         document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-        
-        // 如果处于批量标注模式且切换到已屏蔽，则退出批量标注
         if (tab === 'blocked' && batchLabelMode) {
             toggleBatchLabelMode();
         }
-        
-        // 显示/隐藏标签筛选栏
         if (tab === 'blocked') {
             tagFilterBar.style.display = 'none';
         } else {
             tagFilterBar.style.display = 'flex';
             renderTagFilterBar();
         }
-        
-        // 清空当前详情
         if (tab !== 'blocked') {
             currentTokenDetail = null;
             tokenWeightBar.style.display = 'none';
         }
-        
         renderTokenList();
     }
 
@@ -3709,10 +3714,14 @@
     tagManageBtn.addEventListener('click', openTagManager);
     batchLabelBtn.addEventListener('click', toggleBatchLabelMode);
     const exportTokensBtn = document.getElementById('exportTokensBtn');
-const importLabelsBtn = document.getElementById('importLabelsBtn');
+    const importLabelsBtn = document.getElementById('importLabelsBtn');
 
-exportTokensBtn.addEventListener('click', exportTokens);
-importLabelsBtn.addEventListener('click', importLabels);
+    exportTokensBtn.addEventListener('click', exportTokens);
+    importLabelsBtn.addEventListener('click', importLabels);
+    // 新增翻译事件
+    exportTranslateBtn.addEventListener('click', exportTranslations);
+    importTranslateBtn.addEventListener('click', importTranslations);
+
     batchSelectAllBtn.addEventListener('click', () => {
         const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
         const tokenLabels = loadTokenLabels();
@@ -3788,112 +3797,211 @@ importLabelsBtn.addEventListener('click', importLabels);
         showToast(`已删除 ${deleted} 张重复图片`, 'success');
         await loadAllImages();
     }
-// ==================== 导出词条 ====================
-function exportTokens() {
-    const posTokens = Object.keys(tokenStats.positive).sort((a, b) => tokenStats.positive[b] - tokenStats.positive[a]);
-    const negTokens = Object.keys(tokenStats.negative).sort((a, b) => tokenStats.negative[b] - tokenStats.negative[a]);
-    
-    const instruction = `# 词条分类任务\n\n` +
-        `请对以下词条进行分类标注，每个词条可以属于多个类别。\n` +
-        `建议类别（可自定义）：画师、质量词、画风、场景、主体、动作、服饰、表情、姿势、镜头、光影、颜色、其他。\n\n` +
-        `请输出 **JSON 格式**，键为词条，值为标签数组（使用上面类别名称或你认为合适的标签），例如：\n` +
-        `\`\`\`json\n` +
-        `{\n` +
-        `  "masterpiece": ["质量词"],\n` +
-        `  "outdoors": ["场景"],\n` +
-        `  "sitting": ["动作", "姿势"]\n` +
-        `}\n` +
-        `\`\`\`\n\n` +
-        `请确保每个词条都被标注，标签尽量简洁准确。\n\n`;
-    
-    let content = instruction;
-    content += `## 正向词条列表 (${posTokens.length}个)\n\n`;
-    content += posTokens.join('\n') || '（无）';
-    content += `\n\n## 负向词条列表 (${negTokens.length}个)\n\n`;
-    content += negTokens.join('\n') || '（无）';
-    
-    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-    const filename = `token_export_${new Date().toISOString().slice(0,10)}.md`;
-    downloadBlob(blob, filename);
-    showToast(`已导出 ${posTokens.length + negTokens.length} 个词条`, 'success');
-}
 
-// ==================== 导入标签 ====================
-function importLabels() {
-    // 创建隐藏的文件输入
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.style.display = 'none';
-    document.body.appendChild(input);
-    
-    input.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-                throw new Error('JSON 格式应为对象 { "token": ["标签1","标签2"] }');
-            }
-            
-            const tokenLabels = loadTokenLabels();
-            const customLabels = loadCustomLabels();
-            let importedCount = 0;
-            let newLabelCount = 0;
-            
-            for (const [token, labelsRaw] of Object.entries(data)) {
-                if (!token || !labelsRaw) continue;
-                // 解析标签（数组或逗号分隔字符串）
-                let labels = [];
-                if (Array.isArray(labelsRaw)) {
-                    labels = labelsRaw.map(l => String(l).trim()).filter(Boolean);
-                } else if (typeof labelsRaw === 'string') {
-                    labels = labelsRaw.split(',').map(l => l.trim()).filter(Boolean);
-                } else {
-                    continue;
+    // ==================== 导出词条（分类标注） ====================
+    function exportTokens() {
+        const posTokens = Object.keys(tokenStats.positive).sort((a, b) => tokenStats.positive[b] - tokenStats.positive[a]);
+        const negTokens = Object.keys(tokenStats.negative).sort((a, b) => tokenStats.negative[b] - tokenStats.negative[a]);
+
+        const instruction = `# 词条分类任务\n\n` +
+            `请对以下词条进行分类标注，每个词条可以属于多个类别。\n` +
+            `建议类别（可自定义）：画师、质量词、画风、场景、主体、动作、服饰、表情、姿势、镜头、光影、颜色、其他。\n\n` +
+            `请输出 **JSON 格式**，键为词条，值为标签数组（使用上面类别名称或你认为合适的标签），例如：\n` +
+            `\`\`\`json\n` +
+            `{\n` +
+            `  "masterpiece": ["质量词"],\n` +
+            `  "outdoors": ["场景"],\n` +
+            `  "sitting": ["动作", "姿势"]\n` +
+            `}\n` +
+            `\`\`\`\n\n` +
+            `请确保每个词条都被标注，标签尽量简洁准确。\n\n`;
+
+        let content = instruction;
+        content += `## 正向词条列表 (${posTokens.length}个)\n\n`;
+        content += posTokens.join('\n') || '（无）';
+        content += `\n\n## 负向词条列表 (${negTokens.length}个)\n\n`;
+        content += negTokens.join('\n') || '（无）';
+
+        const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+        const filename = `token_export_${new Date().toISOString().slice(0,10)}.md`;
+        downloadBlob(blob, filename);
+        showToast(`已导出 ${posTokens.length + negTokens.length} 个词条`, 'success');
+    }
+
+    // ==================== 导入标签 ====================
+    function importLabels() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                    throw new Error('JSON 格式应为对象 { "token": ["标签1","标签2"] }');
                 }
-                if (labels.length === 0) continue;
-                
-                // 更新 tokenLabels（追加模式，自动去重）
-                if (!tokenLabels[token]) tokenLabels[token] = [];
-                const existing = new Set(tokenLabels[token]);
-                labels.forEach(l => existing.add(l));
-                tokenLabels[token] = Array.from(existing);
-                importedCount++;
-                
-                // 自动添加新标签到 customLabels
-                labels.forEach(l => {
-                    if (!customLabels.includes(l)) {
-                        customLabels.push(l);
-                        newLabelCount++;
+
+                const tokenLabels = loadTokenLabels();
+                const customLabels = loadCustomLabels();
+                let importedCount = 0;
+                let newLabelCount = 0;
+
+                for (const [token, labelsRaw] of Object.entries(data)) {
+                    if (!token || !labelsRaw) continue;
+                    let labels = [];
+                    if (Array.isArray(labelsRaw)) {
+                        labels = labelsRaw.map(l => String(l).trim()).filter(Boolean);
+                    } else if (typeof labelsRaw === 'string') {
+                        labels = labelsRaw.split(',').map(l => l.trim()).filter(Boolean);
+                    } else {
+                        continue;
                     }
-                });
+                    if (labels.length === 0) continue;
+
+                    if (!tokenLabels[token]) tokenLabels[token] = [];
+                    const existing = new Set(tokenLabels[token]);
+                    labels.forEach(l => existing.add(l));
+                    tokenLabels[token] = Array.from(existing);
+                    importedCount++;
+
+                    labels.forEach(l => {
+                        if (!customLabels.includes(l)) {
+                            customLabels.push(l);
+                            newLabelCount++;
+                        }
+                    });
+                }
+
+                if (importedCount === 0) {
+                    showToast('没有导入任何标签，请检查 JSON 格式', 'error');
+                    return;
+                }
+
+                saveTokenLabels(tokenLabels);
+                saveCustomLabels(customLabels);
+
+                renderTagFilterBar();
+                renderTokenList();
+                showToast(`成功导入 ${importedCount} 个词条的标签，新增 ${newLabelCount} 个标签`, 'success');
+            } catch (err) {
+                showToast(`导入失败: ${err.message}`, 'error');
+                console.error(err);
+            } finally {
+                document.body.removeChild(input);
             }
-            
-            if (importedCount === 0) {
-                showToast('没有导入任何标签，请检查 JSON 格式', 'error');
-                return;
-            }
-            
-            saveTokenLabels(tokenLabels);
-            saveCustomLabels(customLabels);
-            
-            // 刷新界面
-            renderTagFilterBar();
-            renderTokenList();
-            showToast(`成功导入 ${importedCount} 个词条的标签，新增 ${newLabelCount} 个标签`, 'success');
-        } catch (err) {
-            showToast(`导入失败: ${err.message}`, 'error');
-            console.error(err);
-        } finally {
-            document.body.removeChild(input);
+        });
+
+        input.click();
+    }
+
+    // ==================== 导出翻译（新增） ====================
+    function exportTranslations() {
+        // 分别导出正向和负向两个文件
+        const posTokens = Object.keys(tokenStats.positive).sort((a, b) => tokenStats.positive[b] - tokenStats.positive[a]);
+        const negTokens = Object.keys(tokenStats.negative).sort((a, b) => tokenStats.negative[b] - tokenStats.negative[a]);
+
+        const makeExportFile = (tokens, typeLabel) => {
+            const instruction = `# 翻译任务\n\n` +
+                `请将以下${typeLabel}词条翻译成中文（简体），并输出 **JSON 格式**，键为原词条，值为中文翻译。\n` +
+                `要求：\n` +
+                `1. 翻译要准确、简洁，符合绘画提示词场景。\n` +
+                `2. 保持原词条的英文大小写。\n` +
+                `3. 如果无法翻译，请保留原词条。\n\n` +
+                `请输出 JSON，例如：\n` +
+                `\`\`\`json\n` +
+                `{\n` +
+                `  "masterpiece": "杰作",\n` +
+                `  "outdoors": "户外"\n` +
+                `}\n` +
+                `\`\`\`\n\n` +
+                `词条列表：\n\n` +
+                tokens.join('\n') || '（无）';
+
+            return instruction;
+        };
+
+        if (posTokens.length > 0) {
+            const posContent = makeExportFile(posTokens, '正向');
+            const posBlob = new Blob([posContent], { type: 'text/markdown;charset=utf-8' });
+            const posFilename = `token_translate_positive_${new Date().toISOString().slice(0,10)}.md`;
+            downloadBlob(posBlob, posFilename);
         }
-    });
-    
-    input.click();
-}
+
+        if (negTokens.length > 0) {
+            const negContent = makeExportFile(negTokens, '负向');
+            const negBlob = new Blob([negContent], { type: 'text/markdown;charset=utf-8' });
+            const negFilename = `token_translate_negative_${new Date().toISOString().slice(0,10)}.md`;
+            downloadBlob(negBlob, negFilename);
+        }
+
+        if (posTokens.length === 0 && negTokens.length === 0) {
+            showToast('没有可导出的词条', 'error');
+        } else {
+            showToast(`已导出正向 ${posTokens.length} 个、负向 ${negTokens.length} 个翻译文件`, 'success');
+        }
+    }
+
+    // ==================== 导入翻译（新增） ====================
+    function importTranslations() {
+        // 询问用户导入正向还是负向
+        const choice = prompt('请输入要导入翻译的类型：\n1 = 正向词条翻译\n2 = 负向词条翻译');
+        if (choice === null) return;
+        const type = choice.trim();
+        const isPositive = (type === '1' || type.toLowerCase() === 'positive' || type.toLowerCase() === '正' || type.toLowerCase() === '正向');
+        const isNegative = (type === '2' || type.toLowerCase() === 'negative' || type.toLowerCase() === '负' || type.toLowerCase() === '负向');
+        if (!isPositive && !isNegative) {
+            showToast('输入无效，请输入1或2', 'error');
+            return;
+        }
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+                    throw new Error('JSON 格式应为对象 { "token": "翻译" }');
+                }
+
+                const existing = isPositive ? loadTranslationsPositive() : loadTranslationsNegative();
+                let importedCount = 0;
+                for (const [token, translation] of Object.entries(data)) {
+                    if (token && translation && typeof translation === 'string') {
+                        existing[token] = translation.trim();
+                        importedCount++;
+                    }
+                }
+
+                if (isPositive) saveTranslationsPositive(existing);
+                else saveTranslationsNegative(existing);
+
+                showToast(`成功导入 ${importedCount} 个${isPositive ? '正向' : '负向'}词条翻译`, 'success');
+                renderTokenList();
+            } catch (err) {
+                showToast(`导入失败: ${err.message}`, 'error');
+                console.error(err);
+            } finally {
+                document.body.removeChild(input);
+            }
+        });
+
+        input.click();
+    }
+
     // ==================== 初始化 ====================
     (async function init() {
         await loadAllImages();
