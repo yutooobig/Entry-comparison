@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1e2a3a">
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* === 原有样式保持不变 === */
+
         :root {
             --bg: #f5f6fa;
             --card-bg: #ffffff;
@@ -1587,11 +1592,23 @@
                 padding: 10px;
             }
             .app-header {
-                padding: 0 10px;
-                height: 52px;
+                padding: 8px 10px;
+                height: auto;
+                min-height: 52px;
+                flex-wrap: wrap;
+                gap: 4px;
             }
             .app-header .logo span {
                 font-size: 14px;
+            }
+            .header-actions {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: flex-start;
+            }
+            .total-size-display {
+                margin-left: auto;
             }
             .header-btn {
                 padding: 6px 10px;
@@ -1603,10 +1620,10 @@
             }
             .filter-bar {
                 padding: 6px 10px;
-                top: 52px;
+                top: var(--header-height); /* 动态更新 */
             }
             .main-content {
-                min-height: calc(100vh - 52px - 44px);
+                min-height: calc(100vh - var(--header-height) - var(--filter-height));
             }
             .token-sidebar {
                 width: 100%;
@@ -1901,8 +1918,22 @@
     <div class="toast-container" id="toastContainer"></div>
     <input type="file" id="fileInput" accept="image/*" multiple>
 
+    <!-- 动态更新 header 高度，确保 sticky 定位正确 -->
     <script>
-(function() {
+        (function() {
+            function updateHeaderHeight() {
+                const header = document.querySelector('.app-header');
+                if (header) {
+                    const h = header.offsetHeight;
+                    document.documentElement.style.setProperty('--header-height', h + 'px');
+                }
+            }
+            window.addEventListener('load', updateHeaderHeight);
+            window.addEventListener('resize', updateHeaderHeight);
+            // 初始执行一次
+            updateHeaderHeight();
+        })();
+        
     // ==================== 数据库操作 ====================
     const DB_NAME = 'pngGalleryDB';
     const DB_VERSION = 1;
