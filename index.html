@@ -101,69 +101,58 @@
         .download-actions .btn-sm.danger { background:var(--danger); color:#fff; border-color:var(--danger); }
         .download-actions .btn-sm.danger:hover { background:var(--danger-hover); }
 
-        /* 权重二次筛选栏 */
+        /* 新增：权重筛选栏 */
         .weight-filter-bar {
-            display:none;
-            width:100%;
-            flex-basis:100%;
-            gap:6px;
-            align-items:center;
-            flex-wrap:wrap;
-            padding-top:6px;
-            border-top:1px dashed #e0e0e0;
-            margin-top:4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            width: 100%;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border);
+            margin-top: 6px;
         }
-        .weight-filter-bar.active {
-            display:flex;
+        .weight-filter-bar .weight-filter-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
         }
-        .weight-filter-group {
-            display:flex;
-            align-items:center;
-            gap:6px;
-            flex-wrap:wrap;
-            background:#fafbfc;
-            padding:6px 12px;
-            border-radius:8px;
-            border:1px solid #e8e8e8;
+        .weight-filter-bar .weight-capsule {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f0f2f5;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #d0d5dd;
+            cursor: pointer;
+            transition: var(--transition);
+            user-select: none;
         }
-        .weight-filter-group .weight-group-label {
-            font-size:12px;
-            font-weight:600;
-            color:var(--text-secondary);
-            white-space:nowrap;
+        .weight-filter-bar .weight-capsule:hover {
+            background: #e0e5ff;
+            border-color: var(--primary);
         }
-        .weight-capsule {
-            display:inline-flex;
-            align-items:center;
-            gap:4px;
-            background:#f0f2f5;
-            border-radius:16px;
-            padding:4px 12px;
-            font-size:12px;
-            font-weight:500;
-            border:1px solid #d0d5dd;
-            cursor:pointer;
-            transition:var(--transition);
-            user-select:none;
+        .weight-filter-bar .weight-capsule.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
         }
-        .weight-capsule:hover {
-            background:#e0e5ff;
-            border-color:var(--primary);
+        .weight-filter-bar .weight-capsule .weight-count {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 0 5px;
+            font-size: 10px;
+            font-weight: 700;
         }
-        .weight-capsule.active {
-            background:var(--primary);
-            color:#fff;
-            border-color:var(--primary);
-        }
-        .weight-capsule .weight-count {
-            background:rgba(0,0,0,0.1);
-            border-radius:10px;
-            padding:2px 6px;
-            font-size:10px;
-            font-weight:700;
-        }
-        .weight-capsule.active .weight-count {
-            background:rgba(255,255,255,0.3);
+        .weight-filter-bar .weight-capsule.active .weight-count {
+            background: rgba(255,255,255,0.3);
         }
 
         .main-content { display:flex; min-height:calc(100vh - var(--header-height) - var(--filter-height)); }
@@ -321,8 +310,9 @@
             .sim-pair .sim-actions { width:100%; justify-content:flex-end; }
             .download-actions { width:100%; }
             .total-size-display { font-size:10px; padding:2px 8px; }
-            .weight-filter-group { padding:4px 8px; }
-            .weight-capsule { padding:3px 8px; font-size:11px; }
+            .weight-filter-bar { padding-top:4px; margin-top:4px; }
+            .weight-filter-bar .weight-filter-label { font-size:11px; }
+            .weight-filter-bar .weight-capsule { padding:3px 8px; font-size:11px; }
         }
         @media (max-width:480px) {
             .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; padding:8px; }
@@ -364,8 +354,8 @@
             <button class="btn-sm primary" id="downloadWithMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 含元数据下载</button>
             <button class="btn-sm primary" id="downloadNoMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 不含元数据下载</button>
         </div>
-        <!-- 权重二次筛选栏 -->
-        <div class="weight-filter-bar" id="weightFilterBar"></div>
+        <!-- 新增：权重筛选栏 -->
+        <div id="weightFilterBar" class="weight-filter-bar" style="display:none;"></div>
     </div>
 
     <div class="main-content">
@@ -560,7 +550,6 @@
 
             // ==================== 词条提取（支持 NovelAI 权重语法） ====================
 
-            // 解析括号权重，返回去除括号后的 token 和括号乘数
             function parseBrackets(rawToken) {
                 let token = rawToken.trim();
                 let multiplier = 1.0;
@@ -586,40 +575,35 @@
 
                 let cleaned = promptStr;
 
-                // 移除 {{tar}} 占位符（NAI 特有）
+                // 移除 {{tar}} 占位符
                 cleaned = cleaned.replace(/\{\{tar\}\}/g, '');
 
                 const tokensSet = new Set();
                 const weights = {};
 
-                // ---------- 处理单个 token（不带 :: 权重的部分） ----------
                 function processPlainToken(rawToken) {
                     let token = rawToken.trim();
                     if (!token) return null;
 
-                    // 1. 解析括号乘数
                     const bracket = parseBrackets(token);
                     token = bracket.token;
                     let weight = bracket.multiplier;
 
-                    // 2. 检查旧式 token:weight 后缀（如 "blue eyes:1.3"）
                     const suffixMatch = token.match(/(.+?):\s*(-?\d+(?:\.\d+)?)\s*$/);
                     if (suffixMatch) {
                         token = suffixMatch[1].trim();
                         const w = parseFloat(suffixMatch[2]);
-                        if (!isNaN(w)) weight = w;      // 旧式后缀直接指定权重，忽略括号乘数
+                        if (!isNaN(w)) weight = w;
                     }
 
-                    // 3. 清理 token
-                    token = token.replace(/[()\[\]<>]/g, '');   // 移除圆括号、方括号、尖括号等残留
+                    token = token.replace(/[()\[\]<>]/g, '');
                     token = token.replace(/\s+/g, ' ').trim();
-                    token = token.replace(/^[\d\s.]+/, '').trim(); // 去除开头的数字和点（如 "1girl" 残留）
+                    token = token.replace(/^[\d\s.]+/, '').trim();
 
                     if (!token || token.length < 1 || token.length >= 200) return null;
                     return { token, weight };
                 }
 
-                // ---------- 提取所有 :: 权重块 ----------
                 const weightBlocks = [];
                 const blockRegex = /(-?\d+(?:\.\d+)?)\s*::\s*([\s\S]*?)\s*::/g;
                 let match;
@@ -628,11 +612,9 @@
                     const blockWeight = parseFloat(match[1]);
                     const blockContent = match[2];
                     weightBlocks.push({ weight: blockWeight, content: blockContent });
-                    // 从字符串中移除该块，避免被当作普通 token 处理
                     remainingStr = remainingStr.replace(match[0], '');
                 }
 
-                // ---------- 处理剩余字符串（可能包含逗号分隔的普通 token） ----------
                 const parts = remainingStr.split(',');
                 for (let part of parts) {
                     const result = processPlainToken(part);
@@ -642,7 +624,6 @@
                     }
                 }
 
-                // ---------- 处理 :: 权重块 ----------
                 for (const block of weightBlocks) {
                     const blockWeight = block.weight;
                     const blockTokens = block.content.split(',');
@@ -650,19 +631,17 @@
                         rawToken = rawToken.trim();
                         if (!rawToken) continue;
 
-                        // 块内 token 不识别旧式后缀，只识别括号乘数
                         const bracket = parseBrackets(rawToken);
                         let token = bracket.token;
                         let weight = blockWeight * bracket.multiplier;
 
-                        // 清理 token
                         token = token.replace(/[()\[\]<>]/g, '');
                         token = token.replace(/\s+/g, ' ').trim();
                         token = token.replace(/^[\d\s.]+/, '').trim();
 
                         if (!token || token.length < 1 || token.length >= 200) continue;
                         tokensSet.add(token);
-                        weights[token] = weight;  // :: 语法优先级高于普通 token，覆盖之前的值
+                        weights[token] = weight;
                     }
                 }
 
@@ -937,50 +916,47 @@
                 } catch (err) { console.error(err); showToast('加载图片失败', 'error'); }
             }
 
-            // 检查单个图片是否匹配某个筛选器
-            function checkImageAgainstFilter(img, filter) {
-                const { token, weight, type } = filter;
-                if (type === 'positive') {
-                    if (!img.promptTokens.includes(token)) return false;
-                    if (weight !== undefined) {
-                        const actualWeight = img.promptWeights?.[token] ?? 1.0;
-                        return Math.abs(actualWeight - weight) < 0.001;
-                    }
-                    return true;
-                } else if (type === 'negative') {
-                    if (!img.negativeTokens.includes(token)) return false;
-                    if (weight !== undefined) {
-                        const actualWeight = img.negativeWeights?.[token] ?? 1.0;
-                        return Math.abs(actualWeight - weight) < 0.001;
-                    }
-                    return true;
-                } else {
-                    // 兼容通用类型（可能没有）
-                    if (img.promptTokens.includes(token) || img.negativeTokens.includes(token)) {
-                        if (weight !== undefined) {
-                            let matched = false;
-                            if (img.promptTokens.includes(token)) {
-                                const w = img.promptWeights?.[token] ?? 1.0;
-                                if (Math.abs(w - weight) < 0.001) matched = true;
-                            }
-                            if (!matched && img.negativeTokens.includes(token)) {
-                                const w = img.negativeWeights?.[token] ?? 1.0;
-                                if (Math.abs(w - weight) < 0.001) matched = true;
-                            }
-                            return matched;
-                        }
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
+            // ==================== 筛选相关 ====================
             function applyFilters() {
                 if (activeFilters.length === 0) {
                     filteredImages = [...allImages];
                 } else {
                     filteredImages = allImages.filter(img => {
-                        return activeFilters.every(filter => checkImageAgainstFilter(img, filter));
+                        return activeFilters.every(filter => {
+                            const { token, weight, type } = filter;
+                            if (type === 'positive') {
+                                if (!img.promptTokens.includes(token)) return false;
+                                if (weight !== undefined) {
+                                    const actualWeight = img.promptWeights && img.promptWeights[token] !== undefined ? img.promptWeights[token] : 1.0;
+                                    return Math.abs(actualWeight - weight) < 0.001;
+                                }
+                                return true;
+                            } else if (type === 'negative') {
+                                if (!img.negativeTokens.includes(token)) return false;
+                                if (weight !== undefined) {
+                                    const actualWeight = img.negativeWeights && img.negativeWeights[token] !== undefined ? img.negativeWeights[token] : 1.0;
+                                    return Math.abs(actualWeight - weight) < 0.001;
+                                }
+                                return true;
+                            } else {
+                                if (img.promptTokens.includes(token) || img.negativeTokens.includes(token)) {
+                                    if (weight !== undefined) {
+                                        let matched = false;
+                                        if (img.promptTokens.includes(token)) {
+                                            const w = img.promptWeights?.[token] ?? 1.0;
+                                            if (Math.abs(w - weight) < 0.001) matched = true;
+                                        }
+                                        if (!matched && img.negativeTokens.includes(token)) {
+                                            const w = img.negativeWeights?.[token] ?? 1.0;
+                                            if (Math.abs(w - weight) < 0.001) matched = true;
+                                        }
+                                        return matched;
+                                    }
+                                    return true;
+                                }
+                                return false;
+                            }
+                        });
                     });
                 }
                 renderGallery();
@@ -988,178 +964,20 @@
                 renderWeightFilterBar();
             }
 
-            // 获取其他筛选条件过滤后的图片（排除指定 token 的所有筛选）
-            function getImagesForOtherFilters(excludeToken, excludeType) {
-                const filters = activeFilters.filter(f => !(f.token === excludeToken && f.type === excludeType));
-                if (filters.length === 0) return [...allImages];
-                return allImages.filter(img => filters.every(filter => checkImageAgainstFilter(img, filter)));
-            }
-
-            // 渲染权重二次筛选栏
-            function renderWeightFilterBar() {
-                // 找出所有无 weight 的词条筛选
-                const tokenFilters = activeFilters.filter(f => f.weight === undefined && (f.type === 'positive' || f.type === 'negative'));
-                if (tokenFilters.length === 0) {
-                    weightFilterBar.classList.remove('active');
-                    weightFilterBar.innerHTML = '';
-                    return;
-                }
-
-                let html = '';
-                for (const tokenFilter of tokenFilters) {
-                    const token = tokenFilter.token;
-                    const type = tokenFilter.type;
-                    const typeLabel = type === 'positive' ? '正' : '负';
-                    const baseImages = getImagesForOtherFilters(token, type);
-
-                    // 统计该 token 在这些图片中的权重分布
-                    const weightCounts = {};
-                    baseImages.forEach(img => {
-                        const hasToken = type === 'positive' ? img.promptTokens.includes(token) : img.negativeTokens.includes(token);
-                        if (!hasToken) return;
-                        const w = type === 'positive' ? (img.promptWeights?.[token] ?? 1.0) : (img.negativeWeights?.[token] ?? 1.0);
-                        weightCounts[w] = (weightCounts[w] || 0) + 1;
-                    });
-
-                    const weightEntries = Object.entries(weightCounts).sort((a,b) => parseFloat(a[0]) - parseFloat(b[0]));
-                    if (weightEntries.length === 0) continue;
-
-                    // 检查当前是否有该 token 的权重筛选
-                    const existingWeightFilter = activeFilters.find(f => f.token === token && f.type === type && f.weight !== undefined);
-                    const currentWeight = existingWeightFilter ? existingWeightFilter.weight : null;
-
-                    let groupHtml = `<div class="weight-filter-group">`;
-                    groupHtml += `<span class="weight-group-label">${token} [${typeLabel}] 权重:</span>`;
-                    weightEntries.forEach(([weight, count]) => {
-                        const w = parseFloat(weight);
-                        const isActive = currentWeight !== null && Math.abs(currentWeight - w) < 0.001;
-                        groupHtml += `<span class="weight-capsule ${isActive ? 'active' : ''}" data-token="${token}" data-type="${type}" data-weight="${w}">${w} <span class="weight-count">${count}</span></span>`;
-                    });
-                    groupHtml += `</div>`;
-                    html += groupHtml;
-                }
-
-                if (html) {
-                    weightFilterBar.innerHTML = html;
-                    weightFilterBar.classList.add('active');
-                    // 绑定事件
-                    weightFilterBar.querySelectorAll('.weight-capsule').forEach(cap => {
-                        cap.addEventListener('click', () => {
-                            const token = cap.dataset.token;
-                            const type = cap.dataset.type;
-                            const weight = parseFloat(cap.dataset.weight);
-                            setTokenWeightFilter(token, type, weight);
-                        });
-                    });
-                } else {
-                    weightFilterBar.classList.remove('active');
-                    weightFilterBar.innerHTML = '';
-                }
-            }
-
-            // 设置或切换词条的权重筛选
-            function setTokenWeightFilter(token, type, weight) {
-                // 移除该 token+type 的所有 weight 筛选
-                activeFilters = activeFilters.filter(f => !(f.token === token && f.type === type && f.weight !== undefined));
-                // 如果传入 weight 不为 null，则添加新的 weight 筛选
-                if (weight !== null && weight !== undefined) {
-                    // 检查是否点击的是同一个权重（若已存在则取消，但上面已移除，所以只需判断之前是否存在）
-                    // 为了支持切换，先查找是否已有相同权重（但已移除，所以总是添加；若之前已有相同权重，用户意图是取消，我们需要识别）
-                    // 但由于移除后无法判断，所以需要额外存储状态。这里采用策略：点击时检查是否已有该权重，若有则取消，否则切换。
-                    // 因此需要在移除前保存旧状态。
-                }
-                // 上面的逻辑有缺陷，需重新设计：
-                // 在 renderWeightFilterBar 中，我们已经知道 currentWeight，但这里无法直接获得。
-                // 因此改为：在点击时，将 currentWeight 作为参数传入。
-                // 但我们可以修改 setTokenWeightFilter 接受额外参数 isCurrentActive 来决定是否取消。
-                // 简单起见，在 renderWeightFilterBar 的点击事件中直接处理：
-                // 如果 cap 有 active 类，则移除该 weight 筛选；否则替换。
-                // 因此不在 setTokenWeightFilter 中判断，而是直接操作 activeFilters。
-                // 为了方便，重新写一个更清晰的函数 setTokenWeight(token, type, weight, isActive)。
-                // 但为了保持代码整洁，这里直接内联操作。
-                // 由于上面已经移除了所有 weight filter，现在需要知道 isActive 状态，但无法获取。
-                // 所以最简单的办法：在点击事件处理中，先判断当前是否 active，然后决定。
-                // 因此不应调用这个函数，而应在 renderWeightFilterBar 的事件中直接处理。
-                // 但 renderWeightFilterBar 已经绑定了 setTokenWeightFilter，该函数没有 isActive 参数。
-                // 我们需要修改 renderWeightFilterBar 的事件绑定，传入 isActive。
-                // 修改方式：在绑定事件时，判断 cap.classList.contains('active')，然后调用不同的逻辑。
-                // 因此不在这个 setTokenWeightFilter 中实现完整逻辑，而是将其改为辅助函数，或者直接在事件中处理。
-                // 为了代码清晰，我将在 renderWeightFilterBar 内直接内联，不使用 setTokenWeightFilter。
-                // 因此这个函数可以删除，但为了避免未定义错误，保留一个简单实现。
-                applyFilters();
-            }
-
-            // 重新定义 renderWeightFilterBar 中的事件绑定为直接操作
-            function renderWeightFilterBar() {
-                const tokenFilters = activeFilters.filter(f => f.weight === undefined && (f.type === 'positive' || f.type === 'negative'));
-                if (tokenFilters.length === 0) {
-                    weightFilterBar.classList.remove('active');
-                    weightFilterBar.innerHTML = '';
-                    return;
-                }
-
-                let html = '';
-                for (const tokenFilter of tokenFilters) {
-                    const token = tokenFilter.token;
-                    const type = tokenFilter.type;
-                    const typeLabel = type === 'positive' ? '正' : '负';
-                    const baseImages = getImagesForOtherFilters(token, type);
-
-                    const weightCounts = {};
-                    baseImages.forEach(img => {
-                        const hasToken = type === 'positive' ? img.promptTokens.includes(token) : img.negativeTokens.includes(token);
-                        if (!hasToken) return;
-                        const w = type === 'positive' ? (img.promptWeights?.[token] ?? 1.0) : (img.negativeWeights?.[token] ?? 1.0);
-                        weightCounts[w] = (weightCounts[w] || 0) + 1;
-                    });
-
-                    const weightEntries = Object.entries(weightCounts).sort((a,b) => parseFloat(a[0]) - parseFloat(b[0]));
-                    if (weightEntries.length === 0) continue;
-
-                    const existingWeightFilter = activeFilters.find(f => f.token === token && f.type === type && f.weight !== undefined);
-                    const currentWeight = existingWeightFilter ? existingWeightFilter.weight : null;
-
-                    let groupHtml = `<div class="weight-filter-group">`;
-                    groupHtml += `<span class="weight-group-label">${token} [${typeLabel}] 权重:</span>`;
-                    weightEntries.forEach(([weight, count]) => {
-                        const w = parseFloat(weight);
-                        const isActive = currentWeight !== null && Math.abs(currentWeight - w) < 0.001;
-                        groupHtml += `<span class="weight-capsule ${isActive ? 'active' : ''}" data-token="${token}" data-type="${type}" data-weight="${w}" data-active="${isActive}">${w} <span class="weight-count">${count}</span></span>`;
-                    });
-                    groupHtml += `</div>`;
-                    html += groupHtml;
-                }
-
-                if (html) {
-                    weightFilterBar.innerHTML = html;
-                    weightFilterBar.classList.add('active');
-                    weightFilterBar.querySelectorAll('.weight-capsule').forEach(cap => {
-                        cap.addEventListener('click', () => {
-                            const token = cap.dataset.token;
-                            const type = cap.dataset.type;
-                            const weight = parseFloat(cap.dataset.weight);
-                            const wasActive = cap.dataset.active === 'true';
-
-                            // 移除该 token+type 的所有 weight 筛选
-                            activeFilters = activeFilters.filter(f => !(f.token === token && f.type === type && f.weight !== undefined));
-                            if (!wasActive) {
-                                // 添加新的权重筛选
-                                activeFilters.push({ token, type, weight });
-                            }
-                            applyFilters();
-                        });
-                    });
-                } else {
-                    weightFilterBar.classList.remove('active');
-                    weightFilterBar.innerHTML = '';
-                }
-            }
-
             function addFilter(filterObj) {
-                if (!activeFilters.some(f => f.token === filterObj.token && f.weight === filterObj.weight && f.type === filterObj.type)) {
-                    activeFilters.push(filterObj);
-                    applyFilters();
+                // 每个 token+type 只保留一个筛选条件
+                if (filterObj.weight !== undefined) {
+                    // 带权重筛选：移除同 token+type 的所有其他筛选
+                    activeFilters = activeFilters.filter(f => !(f.token === filterObj.token && f.type === filterObj.type));
+                } else {
+                    // 无权重筛选：移除同 token+type 的带权重筛选
+                    activeFilters = activeFilters.filter(f => !(f.token === filterObj.token && f.type === filterObj.type && f.weight !== undefined));
                 }
+                // 检查是否已存在相同的筛选（避免重复）
+                if (!activeFilters.some(f => f.token === filterObj.token && f.type === filterObj.type && f.weight === filterObj.weight)) {
+                    activeFilters.push(filterObj);
+                }
+                applyFilters();
             }
 
             function removeFilter(filterObj) {
@@ -1169,6 +987,17 @@
 
             function clearAllFilters() {
                 activeFilters = [];
+                applyFilters();
+            }
+
+            function setWeightFilter(token, type, weight) {
+                // 移除该 token+type 的所有现有筛选
+                activeFilters = activeFilters.filter(f => !(f.token === token && f.type === type));
+                if (weight !== null && weight !== undefined) {
+                    activeFilters.push({ token, type, weight });
+                } else {
+                    activeFilters.push({ token, type }); // 无权重筛选
+                }
                 applyFilters();
             }
 
@@ -1186,6 +1015,60 @@
                     filterTags.appendChild(tag);
                 });
                 clearFilterBtn.style.display = activeFilters.length > 0 ? 'flex' : 'none';
+            }
+
+            function renderWeightFilterBar() {
+                // 获取第一个 token 类型的筛选（positive 或 negative）
+                const primaryFilter = activeFilters.find(f => f.type === 'positive' || f.type === 'negative');
+                if (!primaryFilter || filteredImages.length === 0) {
+                    weightFilterBar.style.display = 'none';
+                    weightFilterBar.innerHTML = '';
+                    return;
+                }
+
+                const { token, type } = primaryFilter;
+                // 统计 filteredImages 中该 token 的权重分布
+                const weightCounts = {};
+                filteredImages.forEach(img => {
+                    let weights = type === 'positive' ? img.promptWeights : img.negativeWeights;
+                    let tokens = type === 'positive' ? img.promptTokens : img.negativeTokens;
+                    if (tokens.includes(token)) {
+                        const w = weights && weights[token] !== undefined ? weights[token] : 1.0;
+                        weightCounts[w] = (weightCounts[w] || 0) + 1;
+                    }
+                });
+
+                const allWeights = Object.keys(weightCounts).map(Number).sort((a,b) => a - b);
+                if (allWeights.length === 0) {
+                    weightFilterBar.style.display = 'none';
+                    weightFilterBar.innerHTML = '';
+                    return;
+                }
+
+                // 当前选中的权重（如果有）
+                const currentWeightFilter = activeFilters.find(f => f.token === token && f.type === type && f.weight !== undefined);
+                const currentWeight = currentWeightFilter ? currentWeightFilter.weight : null;
+
+                let html = `<span class="weight-filter-label"><i class="fa-solid fa-weight-scale"></i> ${token} 权重:</span>`;
+                // "全部" 胶囊
+                html += `<span class="weight-capsule ${currentWeight === null ? 'active' : ''}" data-weight="all">全部 <span class="weight-count">${filteredImages.length}</span></span>`;
+                allWeights.forEach(w => {
+                    html += `<span class="weight-capsule ${currentWeight === w ? 'active' : ''}" data-weight="${w}">${w} <span class="weight-count">${weightCounts[w]}</span></span>`;
+                });
+                weightFilterBar.innerHTML = html;
+                weightFilterBar.style.display = 'flex';
+
+                // 绑定事件
+                weightFilterBar.querySelectorAll('.weight-capsule').forEach(cap => {
+                    cap.addEventListener('click', () => {
+                        const w = cap.dataset.weight;
+                        if (w === 'all') {
+                            setWeightFilter(token, type, null);
+                        } else {
+                            setWeightFilter(token, type, parseFloat(w));
+                        }
+                    });
+                });
             }
 
             function renderGallery() {
@@ -1408,7 +1291,7 @@
                         const weight = parseFloat(cap.dataset.weight);
                         const token = cap.dataset.token;
                         const type = cap.dataset.type;
-                        addFilter({ token, weight, type });
+                        setWeightFilter(token, type, weight);
                     });
                 });
             }
