@@ -2244,18 +2244,65 @@
             }
 
             // 从提示词中移除被屏蔽的词条
-            function removeBlockedTokensFromPrompt(prompt, blockedTokens) {
-                if (!prompt || blockedTokens.size === 0) return prompt;
-                const parts = prompt.split(',');
-                const filteredParts = parts.filter(part => {
-                    const tokenData = extractTokenData(part);
-                    return !tokenData.tokens.some(t => blockedTokens.has(t));
-                });
-                let result = filteredParts.join(',');
-                // 清理多余的逗号
-                result = result.replace(/,\s*,/g, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
-                return result;
-            }
+function removeBlockedTokensFromPrompt(prompt, blockedTokens) {
+    if (!prompt || blockedTokens.size === 0) return prompt;
+    
+    // 匹配权重块：数字::内容::
+    const weightBlockRegex = /(-?\d+(?:\.\d+)?)\s*::\s*([\s\S]*?)\s*::/g;
+    let result = '';
+    let lastIndex = 0;
+    let match;
+    
+    // 辅助：过滤普通逗号分隔部分
+    const filterPlainPart = (text) => {
+        if (!text) return text;
+        const parts = text.split(',');
+        const filtered = parts.filter(part => {
+            const trimmed = part.trim();
+            if (!trimmed) return false;
+            const tokenData = extractTokenData(trimmed);
+            return !tokenData.tokens.some(t => blockedTokens.has(t));
+        });
+        return filtered.join(',');
+    };
+    
+    // 辅助：过滤权重块内部内容（逗号分隔）
+    const filterBlockContent = (content) => {
+        if (!content) return '';
+        const parts = content.split(',');
+        const filtered = parts.filter(part => {
+            const trimmed = part.trim();
+            if (!trimmed) return false;
+            const tokenData = extractTokenData(trimmed);
+            return !tokenData.tokens.some(t => blockedTokens.has(t));
+        });
+        return filtered.join(',');
+    };
+    
+    while ((match = weightBlockRegex.exec(prompt)) !== null) {
+        // 处理权重块之前的普通文本
+        const before = prompt.slice(lastIndex, match.index);
+        result += filterPlainPart(before);
+        
+        // 处理权重块
+        const blockWeight = match[1];
+        const blockContent = match[2];
+        const filteredContent = filterBlockContent(blockContent);
+        if (filteredContent) {
+            result += `${blockWeight}::${filteredContent}::`;
+        }
+        
+        lastIndex = weightBlockRegex.lastIndex;
+    }
+    
+    // 处理最后剩余的普通文本
+    const tail = prompt.slice(lastIndex);
+    result += filterPlainPart(tail);
+    
+    // 清理多余的逗号
+    result = result.replace(/,\s*,/g, ',').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
+    return result;
+}
 
             // ==================== 相似度计算 ====================
             function jaccardSimilarity(setA, setB) {
