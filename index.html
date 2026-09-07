@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/pngquant-wasm@1.1.0/dist/pngquant.min.js"></script>
     <style>
         :root {
             --bg: #f5f6fa;
@@ -67,6 +68,15 @@
         .header-btn.danger { background:var(--danger); border-color:var(--danger); }
         .header-btn.danger:hover { background:var(--danger-hover); border-color:var(--danger-hover); }
 
+        /* 总大小显示 */
+        .total-size-display {
+            display:flex; align-items:center; gap:4px; font-size:12px; color:#b0b8c4;
+            background:rgba(255,255,255,0.08); padding:4px 10px; border-radius:20px;
+            white-space:nowrap; user-select:none;
+        }
+        .total-size-display i { font-size:11px; }
+        .total-size-display span { font-weight:600; }
+
         .filter-bar {
             position: sticky; top:var(--header-height); z-index:90;
             background: var(--card-bg); padding:8px 16px; border-bottom:1px solid var(--border);
@@ -90,6 +100,20 @@
         .download-actions .btn-sm:hover { background:#e9ecef; }
         .download-actions .btn-sm.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
         .download-actions .btn-sm.primary:hover { background:var(--primary-hover); }
+        .download-actions .btn-sm.danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+        .download-actions .btn-sm.danger:hover { background:var(--danger-hover); }
+
+        /* 压缩进度条 */
+        .compress-progress {
+            width:100%; display:none; align-items:center; gap:8px; padding:4px 0;
+        }
+        .compress-progress .progress-bar {
+            flex:1; height:6px; background:#e9ecef; border-radius:3px; overflow:hidden;
+        }
+        .compress-progress .progress-bar-inner {
+            height:100%; width:0%; background:var(--primary); border-radius:3px; transition:width 0.3s;
+        }
+        .compress-progress .progress-text { font-size:11px; color:var(--text-secondary); white-space:nowrap; }
 
         .main-content { display:flex; min-height:calc(100vh - var(--header-height) - var(--filter-height)); }
         .gallery { flex:1; padding:16px; overflow-y:auto; }
@@ -245,6 +269,7 @@
             .header-btn { padding:7px 9px; }
             .sim-pair .sim-actions { width:100%; justify-content:flex-end; }
             .download-actions { width:100%; }
+            .total-size-display { font-size:10px; padding:2px 8px; }
         }
         @media (max-width:480px) {
             .gallery-grid { grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; padding:8px; }
@@ -256,6 +281,7 @@
             .modal-body { padding:10px; gap:10px; }
             .prompt-text { font-size:11px; max-height:120px; padding:8px; }
             .sim-pair .sim-actions { flex-wrap:wrap; }
+            .download-actions .btn-sm { font-size:10px; padding:4px 6px; }
         }
     </style>
 </head>
@@ -263,9 +289,9 @@
     <header class="app-header">
         <div class="logo"><i class="fa-solid fa-images"></i><span>NAI解析</span></div>
         <div class="header-actions">
+            <div class="total-size-display" id="totalSizeDisplay"><i class="fa-solid fa-database"></i> <span id="totalSizeValue">0 B</span></div>
             <button class="header-btn primary" id="uploadBtn"><i class="fa-solid fa-upload"></i><span class="btn-text">上传图片</span></button>
-            <button class="header-btn" id="downloadModeBtn"><i class="fa-solid fa-download"></i><span class="btn-text">多选下载</span></button>
-            <button class="header-btn" id="compressBtn"><i class="fa-solid fa-compress"></i><span class="btn-text">压缩图片</span></button>
+            <button class="header-btn" id="downloadModeBtn"><i class="fa-solid fa-download"></i><span class="btn-text">多选操作</span></button>
             <button class="header-btn" id="deleteDuplicatesBtn"><i class="fa-solid fa-copy"></i><span class="btn-text">删除重复</span></button>
             <button class="header-btn" id="tokenLibraryBtn"><i class="fa-solid fa-book"></i><span class="btn-text">词条库</span></button>
             <button class="header-btn" id="similarityBtn"><i class="fa-solid fa-chart-simple"></i><span class="btn-text">相似度</span></button>
@@ -279,6 +305,13 @@
         <div class="download-actions" id="downloadActions">
             <button class="btn-sm" id="selectAllBtn"><i class="fa-solid fa-check-double"></i> 全选</button>
             <button class="btn-sm" id="deselectAllBtn"><i class="fa-solid fa-square"></i> 取消全选</button>
+            <button class="btn-sm" id="selectRangeBtn"><i class="fa-solid fa-arrows-left-right"></i> 选择区间</button>
+            <button class="btn-sm" id="invertSelectionBtn"><i class="fa-solid fa-retweet"></i> 反选</button>
+            <button class="btn-sm danger" id="compressSelectedBtn"><i class="fa-solid fa-compress"></i> 压缩选中</button>
+            <div class="compress-progress" id="compressProgress">
+                <div class="progress-bar"><div class="progress-bar-inner" id="progressBarInner"></div></div>
+                <span class="progress-text" id="progressText">0/0</span>
+            </div>
             <button class="btn-sm primary" id="downloadWithMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 含元数据下载</button>
             <button class="btn-sm primary" id="downloadNoMetaBtn"><i class="fa-solid fa-file-arrow-down"></i> 不含元数据下载</button>
         </div>
@@ -294,6 +327,8 @@
             <div class="gallery-grid" id="galleryGrid" style="display:none;"></div>
         </div>
     </div>
+
+    <!-- 其他模态框保持不变（略） -->
 
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
@@ -620,13 +655,13 @@
 
             let allImages = [];
             let filteredImages = [];
-            let activeFilters = []; // 元素: { token, weight?, type? }
+            let activeFilters = [];
             let currentTokenTab = 'positive';
             let tokenStats = { positive: {}, negative: {} };
             let selectedImageId = null;
             let selectionMode = false;
             let selectedIds = new Set();
-            let currentTokenDetail = null; // { token, type }
+            let currentTokenDetail = null;
 
             const galleryGrid = document.getElementById('galleryGrid');
             const galleryEmpty = document.getElementById('galleryEmpty');
@@ -638,11 +673,16 @@
             const tokenLibraryBtn = document.getElementById('tokenLibraryBtn');
             const similarityBtn = document.getElementById('similarityBtn');
             const downloadModeBtn = document.getElementById('downloadModeBtn');
-            const compressBtn = document.getElementById('compressBtn');
             const deleteDuplicatesBtn = document.getElementById('deleteDuplicatesBtn');
             const downloadActions = document.getElementById('downloadActions');
             const selectAllBtn = document.getElementById('selectAllBtn');
             const deselectAllBtn = document.getElementById('deselectAllBtn');
+            const selectRangeBtn = document.getElementById('selectRangeBtn');
+            const invertSelectionBtn = document.getElementById('invertSelectionBtn');
+            const compressSelectedBtn = document.getElementById('compressSelectedBtn');
+            const compressProgress = document.getElementById('compressProgress');
+            const progressBarInner = document.getElementById('progressBarInner');
+            const progressText = document.getElementById('progressText');
             const downloadWithMetaBtn = document.getElementById('downloadWithMetaBtn');
             const downloadNoMetaBtn = document.getElementById('downloadNoMetaBtn');
             const tokenSidebar = document.getElementById('tokenSidebar');
@@ -669,6 +709,7 @@
             const weightDiffModal = document.getElementById('weightDiffModal');
             const weightDiffCloseBtn = document.getElementById('weightDiffCloseBtn');
             const weightDiffBody = document.getElementById('weightDiffBody');
+            const totalSizeValue = document.getElementById('totalSizeValue');
 
             function showToast(message, type = 'info') {
                 const toast = document.createElement('div');
@@ -677,6 +718,22 @@
                 toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i> ${message}`;
                 toastContainer.appendChild(toast);
                 setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2600);
+            }
+
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function getTotalSize() {
+                return allImages.reduce((sum, img) => sum + (img.fileBlob ? img.fileBlob.size : 0), 0);
+            }
+
+            function updateTotalSizeDisplay() {
+                totalSizeValue.textContent = formatBytes(getTotalSize());
             }
 
             function generateThumbnailFromBlob(blob, maxSize = 300) {
@@ -741,6 +798,7 @@
                             promptWeights: promptData.weights,
                             negativeWeights: negativeData.weights,
                             timestamp: Date.now(),
+                            isCompressed: false,  // 新增压缩标记
                         };
                         await dbAddImage(imageData);
                         successCount++;
@@ -764,6 +822,7 @@
                     allImages.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
                     applyFilters();
                     updateTokenStats();
+                    updateTotalSizeDisplay(); // 更新总大小
                     if (tokenSidebar.classList.contains('active')) renderTokenList();
                 } catch (err) { console.error(err); showToast('加载图片失败', 'error'); }
             }
@@ -917,6 +976,7 @@
                     selectedIds.delete(id);
                     applyFilters();
                     updateTokenStats();
+                    updateTotalSizeDisplay();
                     if (tokenSidebar.classList.contains('active')) renderTokenList();
                 } catch (err) { showToast('删除失败', 'error'); }
             }
@@ -1102,8 +1162,46 @@
                 selectionMode = !selectionMode;
                 selectedIds.clear();
                 downloadActions.classList.toggle('active', selectionMode);
+                compressProgress.style.display = 'none'; // 隐藏进度条
                 renderGallery();
             }
+
+            // 全选、取消全选、区间选择、反选
+            selectAllBtn.addEventListener('click', () => {
+                filteredImages.forEach(img => selectedIds.add(img.id));
+                renderGallery();
+            });
+            deselectAllBtn.addEventListener('click', () => {
+                selectedIds.clear();
+                renderGallery();
+            });
+            selectRangeBtn.addEventListener('click', () => {
+                const selectedArray = Array.from(selectedIds);
+                if (selectedArray.length < 2) {
+                    showToast('请先选中至少两张图片作为端点', 'error');
+                    return;
+                }
+                // 获取选中图片在 filteredImages 中的索引
+                const indices = selectedArray.map(id => filteredImages.findIndex(img => img.id === id)).filter(idx => idx !== -1);
+                if (indices.length < 2) {
+                    showToast('部分选中图片不在当前筛选结果中', 'error');
+                    return;
+                }
+                const minIdx = Math.min(...indices);
+                const maxIdx = Math.max(...indices);
+                for (let i = minIdx; i <= maxIdx; i++) {
+                    selectedIds.add(filteredImages[i].id);
+                }
+                renderGallery();
+                showToast(`已选中区间内 ${maxIdx - minIdx + 1} 张图片`, 'success');
+            });
+            invertSelectionBtn.addEventListener('click', () => {
+                filteredImages.forEach(img => {
+                    if (selectedIds.has(img.id)) selectedIds.delete(img.id);
+                    else selectedIds.add(img.id);
+                });
+                renderGallery();
+            });
 
             function downloadBlob(blob, filename) {
                 const url = URL.createObjectURL(blob);
@@ -1131,51 +1229,146 @@
                 showToast(`已开始下载 ${images.length} 张图片`, 'success');
             }
 
-            async function compressAllImages() {
-                if (!confirm('重新压缩所有图片（最大边长2048px），覆盖原文件，确定？')) return;
-                let processed = 0;
-                for (const img of allImages) {
-                    try {
-                        const newBlob = await compressImage(img);
-                        const newThumb = await generateThumbnailFromBlob(newBlob);
-                        const updated = { ...img, fileBlob: newBlob, thumbnailDataURL: newThumb };
-                        await dbAddImage(updated);
-                        processed++;
-                    } catch(e) { showToast(`压缩 ${img.name} 失败`, 'error'); }
-                }
-                showToast(`压缩完成 ${processed}/${allImages.length}`, 'success');
-                await loadAllImages();
-            }
-
-            function compressImage(img) {
-                return new Promise((resolve, reject) => {
+            // ========== 新增压缩相关函数 ==========
+            async function compressImage(img) {
+                // 先缩放并导出 PNG
+                const scaledPngBlob = await new Promise((resolve, reject) => {
                     const url = URL.createObjectURL(img.fileBlob);
                     const image = new Image();
                     image.onload = () => {
                         try {
                             const maxDim = 2048;
                             let w = image.width, h = image.height;
-                            if (w > maxDim || h > maxDim) { const ratio = Math.min(maxDim/w, maxDim/h); w = Math.round(w*ratio); h = Math.round(h*ratio); }
+                            if (w > maxDim || h > maxDim) {
+                                const ratio = Math.min(maxDim / w, maxDim / h);
+                                w = Math.round(w * ratio);
+                                h = Math.round(h * ratio);
+                            }
                             const canvas = document.createElement('canvas');
-                            canvas.width = w; canvas.height = h;
+                            canvas.width = w;
+                            canvas.height = h;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(image, 0, 0, w, h);
-                            canvas.toBlob(async (pngBlob) => {
-                                URL.revokeObjectURL(url);
-                                if (!pngBlob) { reject(new Error('Canvas toBlob failed')); return; }
-                                if (img.fileBlob.type === 'image/png') {
-                                    const metadataObj = { prompt: img.prompt || '', uc: img.negativePrompt || '', seed: img.seed ?? undefined, steps: img.steps ?? undefined, sampler: img.sampler || undefined, scale: img.scale ?? undefined };
-                                    const finalBlob = await createPNGWithMetadata(pngBlob, metadataObj);
-                                    resolve(finalBlob);
-                                } else resolve(pngBlob);
+                            URL.revokeObjectURL(url);
+                            canvas.toBlob((blob) => {
+                                if (blob) resolve(blob);
+                                else reject(new Error('Canvas 导出 PNG 失败'));
                             }, 'image/png');
-                        } catch(e) { reject(e); }
+                        } catch (e) {
+                            URL.revokeObjectURL(url);
+                            reject(e);
+                        }
                     };
-                    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片加载失败')); };
+                    image.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        reject(new Error('图片加载失败'));
+                    };
                     image.src = url;
                 });
+
+                // 使用 pngquant-wasm 进行有损压缩
+                if (!window.pngquant) {
+                    throw new Error('压缩引擎未加载');
+                }
+                const inputArray = new Uint8Array(await scaledPngBlob.arrayBuffer());
+                const compressedResult = await window.pngquant.compress(inputArray, {
+                    quality: [0.6, 0.8],
+                    speed: 4,
+                });
+                const compressedPngBlob = new Blob([compressedResult.buffer], { type: 'image/png' });
+
+                // 比较大小，如果压缩后更大，则放弃
+                if (compressedPngBlob.size >= img.fileBlob.size) {
+                    return { skipped: true, reason: '压缩后体积未减小', blob: img.fileBlob };
+                }
+
+                // 如果原图是 PNG，则嵌入元数据
+                let finalBlob = compressedPngBlob;
+                if (img.fileBlob.type === 'image/png') {
+                    const metadataObj = {
+                        prompt: img.prompt || '',
+                        uc: img.negativePrompt || '',
+                        seed: img.seed ?? undefined,
+                        steps: img.steps ?? undefined,
+                        sampler: img.sampler || undefined,
+                        scale: img.scale ?? undefined,
+                    };
+                    finalBlob = await createPNGWithMetadata(compressedPngBlob, metadataObj);
+                }
+
+                // 生成新缩略图
+                const newThumb = await generateThumbnailFromBlob(finalBlob);
+                return { blob: finalBlob, thumbnailDataURL: newThumb, skipped: false };
             }
 
+            async function compressSelected() {
+                if (selectedIds.size === 0) {
+                    showToast('请先选择要压缩的图片', 'error');
+                    return;
+                }
+                const imagesToCompress = allImages.filter(img => selectedIds.has(img.id));
+                if (imagesToCompress.length === 0) return;
+
+                // 过滤掉已压缩过的图片
+                const pendingImages = imagesToCompress.filter(img => !img.isCompressed);
+                const skippedAlreadyCompressed = imagesToCompress.length - pendingImages.length;
+                if (skippedAlreadyCompressed > 0) {
+                    showToast(`跳过 ${skippedAlreadyCompressed} 张已压缩过的图片`, 'info');
+                }
+                if (pendingImages.length === 0) {
+                    showToast('选中的图片均已压缩过', 'info');
+                    return;
+                }
+
+                // 显示进度条
+                compressProgress.style.display = 'flex';
+                progressBarInner.style.width = '0%';
+                progressText.textContent = `0/${pendingImages.length}`;
+
+                const originalTotalSize = getTotalSize();
+                let processed = 0;
+                let successCount = 0;
+                let skippedSize = 0; // 压缩后未减小的图片数量
+
+                for (const img of pendingImages) {
+                    try {
+                        const result = await compressImage(img);
+                        if (result.skipped) {
+                            skippedSize++;
+                            // 标记为已压缩，防止重复尝试
+                            img.isCompressed = true;
+                            await dbAddImage(img);
+                        } else {
+                            img.fileBlob = result.blob;
+                            img.thumbnailDataURL = result.thumbnailDataURL;
+                            img.isCompressed = true;
+                            await dbAddImage(img);
+                            successCount++;
+                        }
+                    } catch (err) {
+                        console.error(`压缩 ${img.name} 失败:`, err);
+                        showToast(`压缩 ${img.name} 失败`, 'error');
+                    }
+                    processed++;
+                    progressBarInner.style.width = `${(processed / pendingImages.length) * 100}%`;
+                    progressText.textContent = `${processed}/${pendingImages.length}`;
+                }
+
+                const newTotalSize = getTotalSize();
+                const savedBytes = originalTotalSize - newTotalSize;
+                const savedText = savedBytes >= 0 ? formatBytes(savedBytes) : `-${formatBytes(-savedBytes)}`;
+
+                progressText.textContent = `完成`;
+                setTimeout(() => {
+                    compressProgress.style.display = 'none';
+                }, 2000);
+
+                showToast(`压缩完成：成功 ${successCount} 张，跳过 ${skippedSize} 张（未减小），总大小变化：${savedText}`, 'success');
+                updateTotalSizeDisplay();
+                renderGallery(); // 刷新画廊以显示可能的缩略图变化
+            }
+
+            // 删除重复图片（保留原逻辑）
             async function deleteDuplicateImages() {
                 const groups = new Map();
                 allImages.forEach(img => {
@@ -1200,6 +1393,7 @@
                 await loadAllImages();
             }
 
+            // 事件绑定
             uploadBtn.addEventListener('click', () => fileInput.click());
             uploadHintBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFiles(e.target.files); fileInput.value = ''; });
@@ -1228,11 +1422,9 @@
             excludeCommonCheckbox.addEventListener('change', renderSimilarityResults);
 
             downloadModeBtn.addEventListener('click', toggleSelectionMode);
-            selectAllBtn.addEventListener('click', () => { filteredImages.forEach(img => selectedIds.add(img.id)); renderGallery(); });
-            deselectAllBtn.addEventListener('click', () => { selectedIds.clear(); renderGallery(); });
             downloadWithMetaBtn.addEventListener('click', () => downloadSelected(true));
             downloadNoMetaBtn.addEventListener('click', () => downloadSelected(false));
-            compressBtn.addEventListener('click', compressAllImages);
+            compressSelectedBtn.addEventListener('click', compressSelected);
             deleteDuplicatesBtn.addEventListener('click', deleteDuplicateImages);
 
             document.addEventListener('keydown', (e) => {
