@@ -2240,6 +2240,96 @@
                 });
                 blockSettingsModal.classList.add('active');
             }
+            
+            // ==================== 批量屏蔽设置 ====================
+function openBlockSettingsForBatch() {
+    if (batchSelectedTokens.size === 0) {
+        showToast('请先勾选词条', 'error');
+        return;
+    }
+    
+    const tokens = Array.from(batchSelectedTokens);
+    const blockedTokens = loadBlockedTokens();
+    
+    // 检查当前这批词条中，哪些屏蔽维度已经被启用
+    let hasDisplay = false, hasCopy = false, hasDiff = false;
+    tokens.forEach(token => {
+        const settings = blockedTokens[token] || {};
+        if (settings.display) hasDisplay = true;
+        if (settings.copy) hasCopy = true;
+        if (settings.diff) hasDiff = true;
+    });
+    
+    // 默认值：如果所有词条都已有某维度，则默认勾选；否则不勾选（取交集逻辑）
+    // 更合理的做法：如果所有词条都有某维度则勾选，否则不勾选（批量应用时会覆盖所有）
+    // 更简单：初始全部不勾选，让用户自行决定
+    
+    blockSettingsTitle.innerHTML = `<i class="fa-solid fa-ban"></i> 批量屏蔽 (${tokens.length} 个词条)`;
+    blockSettingsBody.innerHTML = `
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">为选中的 ${tokens.length} 个词条批量设置屏蔽维度（勾选即屏蔽）:</p>
+        <div class="block-settings-row">
+            <input type="checkbox" id="blockDisplayBatch" ${hasDisplay ? 'checked' : ''}>
+            <div><span class="block-label">屏蔽展示</span><br><span class="block-desc">在词条库列表中隐藏该词条</span></div>
+        </div>
+        <div class="block-settings-row">
+            <input type="checkbox" id="blockCopyBatch" ${hasCopy ? 'checked' : ''}>
+            <div><span class="block-label">屏蔽复制</span><br><span class="block-desc">复制提示词时排除该词条</span></div>
+        </div>
+        <div class="block-settings-row">
+            <input type="checkbox" id="blockDiffBatch" ${hasDiff ? 'checked' : ''}>
+            <div><span class="block-label">屏蔽差异对比</span><br><span class="block-desc">在差异对比和相似度计算中忽略该词条</span></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+            <button class="copy-btn" id="blockResetBatchBtn">重置</button>
+            <button class="copy-btn positive-btn" id="blockSaveBatchBtn"><i class="fa-solid fa-check"></i> 确认屏蔽</button>
+        </div>
+    `;
+    
+    document.getElementById('blockResetBatchBtn').addEventListener('click', () => {
+        document.getElementById('blockDisplayBatch').checked = false;
+        document.getElementById('blockCopyBatch').checked = false;
+        document.getElementById('blockDiffBatch').checked = false;
+    });
+    
+    document.getElementById('blockSaveBatchBtn').addEventListener('click', () => {
+        const display = document.getElementById('blockDisplayBatch').checked;
+        const copy = document.getElementById('blockCopyBatch').checked;
+        const diff = document.getElementById('blockDiffBatch').checked;
+        
+        if (!display && !copy && !diff) {
+            if (!confirm('所有维度都未勾选，这将移除这些词条的所有屏蔽设置，确定吗？')) return;
+        }
+        
+        const blocked = loadBlockedTokens();
+        tokens.forEach(token => {
+            if (display || copy || diff) {
+                // 保留原有其他维度的设置，仅覆盖当前勾选的维度
+                if (!blocked[token]) blocked[token] = { display: false, copy: false, diff: false };
+                // 只修改用户勾选的维度，其他维度保持不变（更符合直觉）
+                // 但如果用户明确取消勾选某个维度，也应该取消屏蔽
+                // 更清晰的逻辑：将当前维度设置为用户勾选的值
+                if (display !== undefined) blocked[token].display = display;
+                if (copy !== undefined) blocked[token].copy = copy;
+                if (diff !== undefined) blocked[token].diff = diff;
+                // 如果所有维度都是 false，删除该条目
+                if (!blocked[token].display && !blocked[token].copy && !blocked[token].diff) {
+                    delete blocked[token];
+                }
+            } else {
+                // 全部取消勾选 → 移除该词条的所有屏蔽设置
+                delete blocked[token];
+            }
+        });
+        saveBlockedTokens(blocked);
+        
+        blockSettingsModal.classList.remove('active');
+        renderTokenList();
+        renderBlockGroupBar();
+        showToast(`已批量更新 ${tokens.length} 个词条的屏蔽设置`, 'success');
+    });
+    
+    blockSettingsModal.classList.add('active');
+}
 
             function closeBlockSettings() { blockSettingsModal.classList.remove('active'); }
 
