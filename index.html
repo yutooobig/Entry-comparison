@@ -1030,7 +1030,7 @@
                 });
             }
             
-// 往 PNG 中注入 tEXt chunk 的工具函数
+// 往 PNG 中注入 tEXt chunk 的工具函数 (已修复文件损坏与CRC覆盖问题)
 function injectPNGMetadata(blob, metadataObj) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -1047,24 +1047,30 @@ function injectPNGMetadata(blob, metadataObj) {
                 offset = dataEnd + 4;
             }
 
-            const keyword = 'Description';
+            // 使用 Comment 关键字以完美兼容上方 parsePNGMetadata 的识别逻辑
+            const keyword = 'Comment';
             const textContent = JSON.stringify(metadataObj);
+
+            // tEXt chunk 的数据格式: Keyword + NULL + Text
             const textBytes = new TextEncoder().encode(keyword + '\0' + textContent);
             const chunkLength = textBytes.length;
             const chunkLengthBytes = uint32ToBytes(chunkLength);
             const chunkTypeBytes = new TextEncoder().encode('tEXt');
 
+            // 计算 CRC 需要包含 Chunk Type (4字节) 和 Data
             const chunkData = new Uint8Array(4 + chunkLength);
             chunkData.set(chunkTypeBytes, 0);
             chunkData.set(textBytes, 4);
             const crc = crc32(chunkData);
             const crcBytes = uint32ToBytes(crc);
 
-            const newChunk = new Uint8Array(4 + chunkLength + 4);
+            // 组装新的 chunk：Length(4) + Type(4) + Data(chunkLength) + CRC(4) = 12 + chunkLength
+            const newChunk = new Uint8Array(12 + chunkLength);
             newChunk.set(chunkLengthBytes, 0);
             newChunk.set(chunkData, 4);
-            newChunk.set(crcBytes, 4 + chunkLength);
+            newChunk.set(crcBytes, 8 + chunkLength); // 修复: 原来少算了 Type 的 4 字节偏移量
 
+            // 将新 chunk 插入到 signature 和原图像 chunk(如IHDR) 之间
             const signature = bytes.slice(0, 8);
             const resultChunks = [signature, chunks[0], newChunk, ...chunks.slice(1)];
 
@@ -1106,10 +1112,10 @@ function compressAndInjectPNG(imageObj, colors = 256) {
 
             try {
                 // 使用 UPNG.js 将图像转化为 256 色索引 PNG
-                // 第四个参数 256 即代表保留 256 种颜色
                 const compressedArrayBuffer = UPNG.encode([imageData.data.buffer], canvas.width, canvas.height, colors);
                 const compressedBlob = new Blob([compressedArrayBuffer], { type: 'image/png' });
 
+                // NAI 元数据字段映射，uc是负向提示词的标准键名
                 const metaDict = {
                     prompt: imageObj.prompt || '',
                     uc: imageObj.negativePrompt || '',
@@ -1119,12 +1125,12 @@ function compressAndInjectPNG(imageObj, colors = 256) {
                     scale: imageObj.scale
                 };
 
-                // 调用注入函数
+                // 注入修复好的元数据
                 injectPNGMetadata(compressedBlob, metaDict).then(finalBlob => {
                     resolve(finalBlob);
                 }).catch(e => {
                     console.error('元数据注入失败:', e);
-                    resolve(compressedBlob); // 如果失败至少返回降级过颜色的图像
+                    resolve(compressedBlob);
                 });
 
             } catch (e) {
@@ -1140,6 +1146,7 @@ function compressAndInjectPNG(imageObj, colors = 256) {
         img.src = url;
     });
 }
+
 
             // ==================== 全局状态 ====================
             let allImages = [];
