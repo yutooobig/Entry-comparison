@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e2a3a">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -545,6 +546,7 @@
     <input type="file" id="fileInput" accept="image/*" multiple>
     <!-- ↓ 新增：备份导入输入框 ↓ -->
     <input type="file" id="backupInput" accept=".json" style="display:none;">
+    <input type="file" id="backupInput" accept=".json,.gz" style="display:none;">
 
 
     <script>
@@ -2539,90 +2541,112 @@ function openBlockSettingsForBatch() {
                 return new Blob([uInt8Array], { type: contentType });
             }
 
-            async function exportBackup() {
-                try {
-                    showToast('正在生成备份文件，可能需要一些时间，请稍候...', 'info');
-                    const allData = await dbGetAllImages();
-                    const exportData = [];
-                    for (const img of allData) {
-                        const imgCopy = { ...img };
-                        if (img.fileBlob) {
-                            imgCopy.fileBase64 = await blobToBase64(img.fileBlob);
-                            imgCopy.fileType = img.fileBlob.type;
-                            delete imgCopy.fileBlob; // 移除 blob 对象以便 JSON 序列化
-                        }
-                        exportData.push(imgCopy);
-                    }
-
-                    const backupObj = {
-                        images: exportData,
-                        localStorage: {
-                            customLabels: loadCustomLabels(),
-                            tokenLabels: loadTokenLabels(),
-                            blockedTokens: loadBlockedTokens(),
-                            tokenTranslations: loadTranslations(),
-                            showTranslation: showTranslation
-                        }
-                    };
-
-                    const jsonStr = JSON.stringify(backupObj);
-                    const blob = new Blob([jsonStr], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `NAI_Gallery_Backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    showToast('备份文件导出成功', 'success');
-                } catch (e) {
-                    console.error(e);
-                    showToast('备份导出失败', 'error');
-                }
+async function exportBackup() {
+    try {
+        showToast('正在生成备份文件，可能需要一些时间，请稍候...', 'info');
+        const allData = await dbGetAllImages();
+        const exportData = [];
+        for (const img of allData) {
+            const imgCopy = { ...img };
+            if (img.fileBlob) {
+                imgCopy.fileBase64 = await blobToBase64(img.fileBlob);
+                imgCopy.fileType = img.fileBlob.type;
+                delete imgCopy.fileBlob;
             }
+            exportData.push(imgCopy);
+        }
 
-            async function importBackup(file) {
-                try {
-                    showToast('正在恢复备份数据，请勿关闭页面...', 'info');
-                    const text = await file.text();
-                    const backupObj = JSON.parse(text);
+        const backupObj = {
+            images: exportData,
+            localStorage: {
+                customLabels: loadCustomLabels(),
+                tokenLabels: loadTokenLabels(),
+                blockedTokens: loadBlockedTokens(),
+                tokenTranslations: loadTranslations(),
+                showTranslation: showTranslation
+            },
+            version: 2, // 版本号，用于区分是否压缩
+            compressed: true
+        };
 
-                    // 恢复 localStorage 数据
-                    if (backupObj.localStorage) {
-                        if (backupObj.localStorage.customLabels) saveCustomLabels(backupObj.localStorage.customLabels);
-                        if (backupObj.localStorage.tokenLabels) saveTokenLabels(backupObj.localStorage.tokenLabels);
-                        if (backupObj.localStorage.blockedTokens) saveBlockedTokens(backupObj.localStorage.blockedTokens);
-                        if (backupObj.localStorage.tokenTranslations) saveTranslations(backupObj.localStorage.tokenTranslations);
-                        if (backupObj.localStorage.showTranslation !== undefined) {
-                            showTranslation = backupObj.localStorage.showTranslation;
-                            localStorage.setItem(LS_SHOW_TRANSLATION, showTranslation);
-                        }
-                    }
+        const jsonStr = JSON.stringify(backupObj);
+        const jsonBytes = new TextEncoder().encode(jsonStr);
+        
+        // 使用 pako 进行 gzip 压缩
+        const compressedBytes = pako.gzip(jsonBytes);
+        const blob = new Blob([compressedBytes], { type: 'application/octet-stream' });
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `NAI_Gallery_Backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json.gz`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        const originalSize = (jsonBytes.length / 1024 / 1024).toFixed(1);
+        const compressedSize = (compressedBytes.length / 1024 / 1024).toFixed(1);
+        showToast(`备份成功！${originalSize}MB → ${compressedSize}MB (压缩率 ${Math.round((1 - compressedBytes.length / jsonBytes.length) * 100)}%)`, 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('备份导出失败: ' + e.message, 'error');
+    }
+}
 
-                    // 恢复 IndexedDB 数据库
-                    if (backupObj.images && backupObj.images.length > 0) {
-                        const oldImages = await dbGetAllImages();
-                        for (const img of oldImages) await dbDeleteImage(img.id); // 清空旧数据
+async function importBackup(file) {
+    try {
+        showToast('正在恢复备份数据，请勿关闭页面...', 'info');
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
 
-                        for (const img of backupObj.images) {
-                            if (img.fileBase64) {
-                                const blob = base64ToBlob(img.fileBase64, img.fileType || 'image/png');
-                                // 将 Blob 重新封装成 File 对象，保证兼容性
-                                img.fileBlob = new File([blob], img.name || 'image.png', { type: img.fileType || 'image/png' });
-                                delete img.fileBase64;
-                                delete img.fileType;
-                            }
-                            await dbAddImage(img);
-                        }
-                    }
+        let jsonStr;
 
-                    await loadAllImages();
-                    showToast('备份数据恢复成功！', 'success');
-                } catch (e) {
-                    console.error(e);
-                    showToast('备份恢复失败，文件可能已损坏或格式不正确', 'error');
-                }
+        // 检测是否为 gzip 压缩格式 (magic number: 1F 8B)
+        if (bytes.length >= 2 && bytes[0] === 0x1F && bytes[1] === 0x8B) {
+            // 是 gzip 压缩文件，解压
+            const decompressed = pako.ungzip(bytes);
+            jsonStr = new TextDecoder().decode(decompressed);
+        } else {
+            // 兼容旧版未压缩的 JSON 备份
+            jsonStr = new TextDecoder().decode(bytes);
+        }
+
+        const backupObj = JSON.parse(jsonStr);
+
+        // 恢复 localStorage 数据
+        if (backupObj.localStorage) {
+            if (backupObj.localStorage.customLabels) saveCustomLabels(backupObj.localStorage.customLabels);
+            if (backupObj.localStorage.tokenLabels) saveTokenLabels(backupObj.localStorage.tokenLabels);
+            if (backupObj.localStorage.blockedTokens) saveBlockedTokens(backupObj.localStorage.blockedTokens);
+            if (backupObj.localStorage.tokenTranslations) saveTranslations(backupObj.localStorage.tokenTranslations);
+            if (backupObj.localStorage.showTranslation !== undefined) {
+                showTranslation = backupObj.localStorage.showTranslation;
+                localStorage.setItem(LS_SHOW_TRANSLATION, showTranslation);
             }
+        }
 
+        // 恢复 IndexedDB 数据库
+        if (backupObj.images && backupObj.images.length > 0) {
+            const oldImages = await dbGetAllImages();
+            for (const img of oldImages) await dbDeleteImage(img.id);
+
+            for (const img of backupObj.images) {
+                if (img.fileBase64) {
+                    const blob = base64ToBlob(img.fileBase64, img.fileType || 'image/png');
+                    img.fileBlob = new File([blob], img.name || 'image.png', { type: img.fileType || 'image/png' });
+                    delete img.fileBase64;
+                    delete img.fileType;
+                }
+                await dbAddImage(img);
+            }
+        }
+
+        await loadAllImages();
+        showToast('备份数据恢复成功！', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('备份恢复失败，文件可能已损坏或格式不正确: ' + e.message, 'error');
+    }
+}
 
             // ==================== 事件绑定 ====================
             function bindEvents() {
