@@ -380,6 +380,12 @@
             <button class="header-btn" id="deleteDuplicatesBtn"><i class="fa-solid fa-copy"></i><span class="btn-text">删除重复</span></button>
             <button class="header-btn" id="tokenLibraryBtn"><i class="fa-solid fa-book"></i><span class="btn-text">词条库</span></button>
             <button class="header-btn" id="similarityBtn"><i class="fa-solid fa-chart-simple"></i><span class="btn-text">相似度</span></button>
+            <!-- ↓ 新增：备份导出与恢复按钮 ↓ -->
+            <button class="header-btn" id="exportBackupBtn"><i class="fa-solid fa-box-archive"></i><span class="btn-text">导出备份</span></button>
+            <button class="header-btn" id="importBackupBtn"><i class="fa-solid fa-upload"></i><span class="btn-text">恢复备份</span></button>
+            <!-- ↑ 新增：备份导出与恢复按钮 ↑ -->
+        </div>
+
         </div>
     </header>
 
@@ -537,6 +543,9 @@
 
     <div class="toast-container" id="toastContainer"></div>
     <input type="file" id="fileInput" accept="image/*" multiple>
+    <!-- ↓ 新增：备份导入输入框 ↓ -->
+    <input type="file" id="backupInput" accept=".json" style="display:none;">
+
 
     <script>
         // ==================== 修复：updateHeaderHeight 必须立即执行 ====================
@@ -1110,6 +1119,14 @@
             const aiImportBtn = document.getElementById('aiImportBtn');
             const toggleTranslationBtn = document.getElementById('toggleTranslationBtn');
             const clearTranslationBtn = document.getElementById('clearTranslationBtn');
+
+            // ↓ 新增：备份相关 DOM 引用 ↓
+            const exportBackupBtn = document.getElementById('exportBackupBtn');
+            const importBackupBtn = document.getElementById('importBackupBtn');
+            const backupInput = document.getElementById('backupInput');
+            // ↑ 新增：备份相关 DOM 引用 ↑
+
+            
 
             // 屏蔽分组 DOM
             const blockGroupBar = document.getElementById('blockGroupBar');
@@ -1831,152 +1848,152 @@
             }
 
             // ==================== 词条列表渲染 ====================
-            function renderTokenList() {
-                if (currentTokenTab === 'blocked') {
-                    renderBlockedTokenList();
-                    return;
-                }
-                // 非屏蔽标签，隐藏分组栏
-                blockGroupBar.style.display = 'none';
-                batchUnblockBar.classList.remove('active');
+function renderTokenList() {
+    if (currentTokenTab === 'blocked') {
+        renderBlockedTokenList();
+        return;
+    }
+    blockGroupBar.style.display = 'none';
+    batchUnblockBar.classList.remove('active');
 
-                const searchTerm = tokenSearchInput.value.trim().toLowerCase();
-                const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
-                const tokenLabels = loadTokenLabels();
-                const translations = loadTranslations();
-                let entries = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+    const searchTerm = tokenSearchInput.value.trim().toLowerCase();
+    const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
+    const tokenLabels = loadTokenLabels();
+    const translations = loadTranslations();
+    let entries = Object.entries(stats).sort((a, b) => b[1] - a[1]);
 
-                if (activeTagFilters.length > 0) {
-                    entries = entries.filter(([token]) => {
-                        const labels = tokenLabels[token] || [];
-                        return activeTagFilters.every(l => labels.includes(l));
-                    });
-                }
+    if (activeTagFilters.length > 0) {
+        entries = entries.filter(([token]) => {
+            const labels = tokenLabels[token] || [];
+            return activeTagFilters.every(l => labels.includes(l));
+        });
+    }
 
-                if (searchTerm) {
-                    entries = entries.filter(([token]) => {
-                        const labels = tokenLabels[token] || [];
-                        const trans = translations[token] || '';
-                        return token.toLowerCase().includes(searchTerm) || trans.toLowerCase().includes(searchTerm) || labels.some(l => l.toLowerCase().includes(searchTerm));
-                    });
-                }
+    if (searchTerm) {
+        entries = entries.filter(([token]) => {
+            const labels = tokenLabels[token] || [];
+            const trans = translations[token] || '';
+            return token.toLowerCase().includes(searchTerm) || trans.toLowerCase().includes(searchTerm) || labels.some(l => l.toLowerCase().includes(searchTerm));
+        });
+    }
 
-                if (!batchLabelMode) {
-                    entries = entries.filter(([token]) => {
-                        const settings = getEffectiveBlockSettings(token);
-                        return !settings.display;
-                    });
-                }
+    if (!batchLabelMode) {
+        entries = entries.filter(([token]) => {
+            const settings = getEffectiveBlockSettings(token);
+            return !settings.display;
+        });
+    }
 
-                if (entries.length === 0) {
-                    tokenList.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>暂无词条</div>';
-                    if (batchLabelMode) updateBatchSelectionUI();
-                    return;
-                }
-                tokenList.innerHTML = '';
-                entries.forEach(([token, count]) => {
-                    const item = document.createElement('div');
-                    item.className = 'token-item';
-                    const countClass = currentTokenTab === 'positive' ? 'pos' : 'neg';
-                    const labels = tokenLabels[token] || [];
-                    const blockSettings = getEffectiveBlockSettings(token);
-                    const isBlockedDisplay = blockSettings.display;
-                    const isBlockedCopy = blockSettings.copy;
-                    const isBlockedDiff = blockSettings.diff;
-                    const isBatchSelected = batchSelectedTokens.has(token);
-                    const isCheckedInBatch = batchLabelMode && isBatchSelected;
+    if (entries.length === 0) {
+        tokenList.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-inbox" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>暂无词条</div>';
+        if (batchLabelMode) updateBatchSelectionUI();
+        return;
+    }
+    tokenList.innerHTML = '';
+    entries.forEach(([token, count]) => {
+        const item = document.createElement('div');
+        item.className = 'token-item';
+        const countClass = currentTokenTab === 'positive' ? 'pos' : 'neg';
+        const labels = tokenLabels[token] || [];
+        const blockSettings = getEffectiveBlockSettings(token);
+        const isBlockedDisplay = blockSettings.display;
+        const isBlockedCopy = blockSettings.copy;
+        const isBlockedDiff = blockSettings.diff;
+        const isBatchSelected = batchSelectedTokens.has(token);
+        const isCheckedInBatch = batchLabelMode && isBatchSelected;
 
-                    let labelsHtml = '';
-                    if (labels.length > 0) {
-                        const shownLabels = labels.slice(0, 2);
-                        const moreCount = labels.length - shownLabels.length;
-                        shownLabels.forEach(l => {
-                            const color = getLabelColor(l);
-                            labelsHtml += `<span class="tag-badge" data-label="${l}" title="点击筛选: ${l}" style="background:${color}15;color:${color};border:1px solid ${color}40;">${l}</span>`;
-                        });
-                        if (moreCount > 0) {
-                            labelsHtml += `<span class="tag-badge more-tags" title="${labels.join(', ')}">+${moreCount}</span>`;
-                        }
-                    }
-
-                    const blockIndicator = (isBlockedDisplay || isBlockedCopy || isBlockedDiff) ?
-                        `<span title="已屏蔽: ${isBlockedDisplay?'展示 ':''}${isBlockedCopy?'复制 ':''}${isBlockedDiff?'差异':''}" style="font-size:10px;color:var(--danger);">🚫</span>` : '';
-
-                    item.innerHTML = `
-                        <input type="checkbox" class="token-checkbox ${batchLabelMode ? 'show' : ''}" data-token="${token}" ${isCheckedInBatch ? 'checked' : ''}>
-                        <span class="token-name" data-token="${token}">${token}${getTranslationHtml(token)}</span>
-                        ${labelsHtml}
-                        ${blockIndicator}
-                        <span class="token-count ${countClass}">${count} 次</span>
-                        <button class="token-action-btn edit-trans-btn" data-token="${token}" title="编辑翻译"><i class="fa-solid fa-language"></i></button>
-                        <button class="token-action-btn tag-btn ${labels.length > 0 ? 'has-tag' : ''}" data-token="${token}" title="打标签"><i class="fa-solid fa-tag"></i></button>
-                        <button class="token-action-btn block-btn ${(isBlockedDisplay||isBlockedCopy||isBlockedDiff) ? 'blocked' : ''}" data-token="${token}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
-                        <button class="token-action-btn filter-token-btn" data-token="${token}" title="筛选图片"><i class="fa-solid fa-filter"></i></button>
-                    `;
-
-                    const nameEl = item.querySelector('.token-name');
-                    nameEl.addEventListener('click', () => {
-                        if (batchLabelMode) return;
-                        currentTokenDetail = { token, type: currentTokenTab };
-                        renderWeightBar(token, currentTokenTab);
-                    });
-
-                    const checkbox = item.querySelector('.token-checkbox');
-                    checkbox.addEventListener('change', (e) => {
-                        e.stopPropagation();
-                        const t = e.target.dataset.token;
-                        if (e.target.checked) batchSelectedTokens.add(t);
-                        else batchSelectedTokens.delete(t);
-                        updateBatchSelectionUI();
-                    });
-
-                    item.querySelector('.edit-trans-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const curTrans = loadTranslations()[token] || '';
-                        const newTrans = prompt(`编辑 "${token}" 的翻译:`, curTrans);
-                        if (newTrans !== null) {
-                            const transData = loadTranslations();
-                            if (newTrans.trim()) {
-                                transData[token] = newTrans.trim();
-                            } else {
-                                delete transData[token];
-                            }
-                            saveTranslations(transData);
-                            renderTokenList();
-                        }
-                    });
-
-                    item.querySelector('.filter-token-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        addFilter({ token, type: currentTokenTab });
-                    });
-                    item.querySelector('.tag-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        openTagSelectorForToken(token);
-                    });
-                    item.querySelector('.block-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        openBlockSettingsForToken(token);
-                    });
-
-                    item.querySelectorAll('.tag-badge[data-label]').forEach(badge => {
-                        badge.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const label = badge.dataset.label;
-                            if (!activeTagFilters.includes(label)) {
-                                activeTagFilters.push(label);
-                            } else {
-                                activeTagFilters = activeTagFilters.filter(l => l !== label);
-                            }
-                            renderTagFilterBar();
-                            renderTokenList();
-                        });
-                    });
-
-                    tokenList.appendChild(item);
-                });
-                if (batchLabelMode) updateBatchSelectionUI();
+        let labelsHtml = '';
+        if (labels.length > 0) {
+            const shownLabels = labels.slice(0, 2);
+            const moreCount = labels.length - shownLabels.length;
+            shownLabels.forEach(l => {
+                const color = getLabelColor(l);
+                labelsHtml += `<span class="tag-badge" data-label="${l}" title="点击筛选: ${l}" style="background:${color}15;color:${color};border:1px solid ${color}40;">${l}</span>`;
+            });
+            if (moreCount > 0) {
+                labelsHtml += `<span class="tag-badge more-tags" title="${labels.join(', ')}">+${moreCount}</span>`;
             }
+        }
+
+        // 🚫 符号已移除，不再需要 blockIndicator 变量
+        // const blockIndicator = (isBlockedDisplay || isBlockedCopy || isBlockedDiff) ?
+        //     `<span title="已屏蔽: ${isBlockedDisplay?'展示 ':''}${isBlockedCopy?'复制 ':''}${isBlockedDiff?'差异':''}" style="font-size:10px;color:var(--danger);">🚫</span>` : '';
+
+        item.innerHTML = `
+            <input type="checkbox" class="token-checkbox ${batchLabelMode ? 'show' : ''}" data-token="${token}" ${isCheckedInBatch ? 'checked' : ''}>
+            <span class="token-name" data-token="${token}">${token}${getTranslationHtml(token)}</span>
+            ${labelsHtml}
+            <span class="token-count ${countClass}">${count} 次</span>
+            <button class="token-action-btn edit-trans-btn" data-token="${token}" title="编辑翻译"><i class="fa-solid fa-language"></i></button>
+            <button class="token-action-btn tag-btn ${labels.length > 0 ? 'has-tag' : ''}" data-token="${token}" title="打标签"><i class="fa-solid fa-tag"></i></button>
+            <button class="token-action-btn block-btn ${(isBlockedDisplay||isBlockedCopy||isBlockedDiff) ? 'blocked' : ''}" data-token="${token}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
+            <button class="token-action-btn filter-token-btn" data-token="${token}" title="筛选图片"><i class="fa-solid fa-filter"></i></button>
+        `;
+
+        // ... 后续事件绑定代码保持不变 ...
+        const nameEl = item.querySelector('.token-name');
+        nameEl.addEventListener('click', () => {
+            if (batchLabelMode) return;
+            currentTokenDetail = { token, type: currentTokenTab };
+            renderWeightBar(token, currentTokenTab);
+        });
+
+        const checkbox = item.querySelector('.token-checkbox');
+        checkbox.addEventListener('change', (e) => {
+            e.stopPropagation();
+            const t = e.target.dataset.token;
+            if (e.target.checked) batchSelectedTokens.add(t);
+            else batchSelectedTokens.delete(t);
+            updateBatchSelectionUI();
+        });
+
+        item.querySelector('.edit-trans-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const curTrans = loadTranslations()[token] || '';
+            const newTrans = prompt(`编辑 "${token}" 的翻译:`, curTrans);
+            if (newTrans !== null) {
+                const transData = loadTranslations();
+                if (newTrans.trim()) {
+                    transData[token] = newTrans.trim();
+                } else {
+                    delete transData[token];
+                }
+                saveTranslations(transData);
+                renderTokenList();
+            }
+        });
+
+        item.querySelector('.filter-token-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            addFilter({ token, type: currentTokenTab });
+        });
+        item.querySelector('.tag-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTagSelectorForToken(token);
+        });
+        item.querySelector('.block-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openBlockSettingsForToken(token);
+        });
+
+        item.querySelectorAll('.tag-badge[data-label]').forEach(badge => {
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const label = badge.dataset.label;
+                if (!activeTagFilters.includes(label)) {
+                    activeTagFilters.push(label);
+                } else {
+                    activeTagFilters = activeTagFilters.filter(l => l !== label);
+                }
+                renderTagFilterBar();
+                renderTokenList();
+            });
+        });
+
+        tokenList.appendChild(item);
+    });
+    if (batchLabelMode) updateBatchSelectionUI();
+}
 
             function renderWeightBar(token, type) {
                 if (!token) { tokenWeightBar.style.display = 'none'; return; }
@@ -2501,6 +2518,111 @@ function openBlockSettingsForBatch() {
                 const stats = currentTokenTab === 'positive' ? tokenStats.positive : tokenStats.negative;
                 return Object.keys(stats).filter(t => !getEffectiveBlockSettings(t).display);
             }
+            
+                        // ==================== 备份与恢复 ====================
+            function blobToBase64(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            }
+
+            function base64ToBlob(base64, type) {
+                const parts = base64.split(';base64,');
+                const contentType = parts[0].split(':')[1] || type;
+                const raw = window.atob(parts[1]);
+                const rawLength = raw.length;
+                const uInt8Array = new Uint8Array(rawLength);
+                for (let i = 0; i < rawLength; ++i) uInt8Array[i] = raw.charCodeAt(i);
+                return new Blob([uInt8Array], { type: contentType });
+            }
+
+            async function exportBackup() {
+                try {
+                    showToast('正在生成备份文件，可能需要一些时间，请稍候...', 'info');
+                    const allData = await dbGetAllImages();
+                    const exportData = [];
+                    for (const img of allData) {
+                        const imgCopy = { ...img };
+                        if (img.fileBlob) {
+                            imgCopy.fileBase64 = await blobToBase64(img.fileBlob);
+                            imgCopy.fileType = img.fileBlob.type;
+                            delete imgCopy.fileBlob; // 移除 blob 对象以便 JSON 序列化
+                        }
+                        exportData.push(imgCopy);
+                    }
+
+                    const backupObj = {
+                        images: exportData,
+                        localStorage: {
+                            customLabels: loadCustomLabels(),
+                            tokenLabels: loadTokenLabels(),
+                            blockedTokens: loadBlockedTokens(),
+                            tokenTranslations: loadTranslations(),
+                            showTranslation: showTranslation
+                        }
+                    };
+
+                    const jsonStr = JSON.stringify(backupObj);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `NAI_Gallery_Backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('备份文件导出成功', 'success');
+                } catch (e) {
+                    console.error(e);
+                    showToast('备份导出失败', 'error');
+                }
+            }
+
+            async function importBackup(file) {
+                try {
+                    showToast('正在恢复备份数据，请勿关闭页面...', 'info');
+                    const text = await file.text();
+                    const backupObj = JSON.parse(text);
+
+                    // 恢复 localStorage 数据
+                    if (backupObj.localStorage) {
+                        if (backupObj.localStorage.customLabels) saveCustomLabels(backupObj.localStorage.customLabels);
+                        if (backupObj.localStorage.tokenLabels) saveTokenLabels(backupObj.localStorage.tokenLabels);
+                        if (backupObj.localStorage.blockedTokens) saveBlockedTokens(backupObj.localStorage.blockedTokens);
+                        if (backupObj.localStorage.tokenTranslations) saveTranslations(backupObj.localStorage.tokenTranslations);
+                        if (backupObj.localStorage.showTranslation !== undefined) {
+                            showTranslation = backupObj.localStorage.showTranslation;
+                            localStorage.setItem(LS_SHOW_TRANSLATION, showTranslation);
+                        }
+                    }
+
+                    // 恢复 IndexedDB 数据库
+                    if (backupObj.images && backupObj.images.length > 0) {
+                        const oldImages = await dbGetAllImages();
+                        for (const img of oldImages) await dbDeleteImage(img.id); // 清空旧数据
+
+                        for (const img of backupObj.images) {
+                            if (img.fileBase64) {
+                                const blob = base64ToBlob(img.fileBase64, img.fileType || 'image/png');
+                                // 将 Blob 重新封装成 File 对象，保证兼容性
+                                img.fileBlob = new File([blob], img.name || 'image.png', { type: img.fileType || 'image/png' });
+                                delete img.fileBase64;
+                                delete img.fileType;
+                            }
+                            await dbAddImage(img);
+                        }
+                    }
+
+                    await loadAllImages();
+                    showToast('备份数据恢复成功！', 'success');
+                } catch (e) {
+                    console.error(e);
+                    showToast('备份恢复失败，文件可能已损坏或格式不正确', 'error');
+                }
+            }
+
 
             // ==================== 事件绑定 ====================
             function bindEvents() {
@@ -2757,6 +2879,21 @@ ${tokens.join('\n')}`;
                         if (aiModal.classList.contains('active')) aiModal.classList.remove('active');
                     }
                 });
+                
+                                // ↓ 新增：备份事件绑定 ↓
+                exportBackupBtn.addEventListener('click', exportBackup);
+                importBackupBtn.addEventListener('click', () => backupInput.click());
+                backupInput.addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        if (confirm('恢复备份将会覆盖当前的图库和所有标签数据，确定要继续吗？')) {
+                            importBackup(e.target.files[0]);
+                        }
+                    }
+                    backupInput.value = ''; // 清空选择，允许重复选同一文件
+                });
+                // ↑ 新增：备份事件绑定 ↑
+            
+
             }
 
             // ==================== 标签切换 ====================
