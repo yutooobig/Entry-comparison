@@ -2543,20 +2543,31 @@ function openBlockSettingsForBatch() {
 
 async function exportBackup() {
     try {
-        showToast('正在生成备份文件，可能需要一些时间，请稍候...', 'info');
+        showToast('正在生成备份文件，请稍候...', 'info');
         const allData = await dbGetAllImages();
         const exportData = [];
+
         for (const img of allData) {
             const imgCopy = { ...img };
             if (img.fileBlob) {
-                imgCopy.fileBase64 = await blobToBase64(img.fileBlob);
+                // 直接读取原始二进制 ArrayBuffer
+                const arrayBuffer = await img.fileBlob.arrayBuffer();
+                // 用 pako 压缩原始二进制数据
+                const compressed = pako.gzip(new Uint8Array(arrayBuffer));
+                // 转为 Base64 存储（但此时数据已经压缩过了，体积小很多）
+                const base64 = btoa(String.fromCharCode(...compressed));
+                imgCopy.fileCompressedBase64 = base64;
                 imgCopy.fileType = img.fileBlob.type;
+                imgCopy.fileName = img.name;
                 delete imgCopy.fileBlob;
+                delete imgCopy.thumbnailDataURL; // 缩略图可以从压缩数据恢复，不存冗余
             }
             exportData.push(imgCopy);
         }
 
         const backupObj = {
+            version: 3,
+            compressed: true,
             images: exportData,
             localStorage: {
                 customLabels: loadCustomLabels(),
@@ -2564,28 +2575,25 @@ async function exportBackup() {
                 blockedTokens: loadBlockedTokens(),
                 tokenTranslations: loadTranslations(),
                 showTranslation: showTranslation
-            },
-            version: 2, // 版本号，用于区分是否压缩
-            compressed: true
+            }
         };
 
+        // 对整个 JSON 再压缩一次（二次压缩效果有限，但可接受）
         const jsonStr = JSON.stringify(backupObj);
         const jsonBytes = new TextEncoder().encode(jsonStr);
-        
-        // 使用 pako 进行 gzip 压缩
-        const compressedBytes = pako.gzip(jsonBytes);
-        const blob = new Blob([compressedBytes], { type: 'application/octet-stream' });
-        
+        const finalCompressed = pako.gzip(jsonBytes);
+
+        const blob = new Blob([finalCompressed], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `NAI_Gallery_Backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json.gz`;
         a.click();
         URL.revokeObjectURL(url);
-        
-        const originalSize = (jsonBytes.length / 1024 / 1024).toFixed(1);
-        const compressedSize = (compressedBytes.length / 1024 / 1024).toFixed(1);
-        showToast(`备份成功！${originalSize}MB → ${compressedSize}MB (压缩率 ${Math.round((1 - compressedBytes.length / jsonBytes.length) * 100)}%)`, 'success');
+
+        const originalSize = allData.reduce((sum, img) => sum + (img.fileBlob ? img.fileBlob.size : 0), 0);
+        const finalSize = finalCompressed.length;
+        showToast(`备份成功！原始 ${(originalSize/1024/1024).toFixed(1)}MB → 备份 ${(finalSize/1024/1024).toFixed(1)}MB (压缩率 ${Math.round((1 - finalSize/originalSize) * 100)}%)`, 'success');
     } catch (e) {
         console.error(e);
         showToast('备份导出失败: ' + e.message, 'error');
@@ -2594,25 +2602,21 @@ async function exportBackup() {
 
 async function importBackup(file) {
     try {
-        showToast('正在恢复备份数据，请勿关闭页面...', 'info');
+        showToast('正在恢复备份数据...', 'info');
         const arrayBuffer = await file.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
 
         let jsonStr;
-
-        // 检测是否为 gzip 压缩格式 (magic number: 1F 8B)
         if (bytes.length >= 2 && bytes[0] === 0x1F && bytes[1] === 0x8B) {
-            // 是 gzip 压缩文件，解压
             const decompressed = pako.ungzip(bytes);
             jsonStr = new TextDecoder().decode(decompressed);
         } else {
-            // 兼容旧版未压缩的 JSON 备份
             jsonStr = new TextDecoder().decode(bytes);
         }
 
         const backupObj = JSON.parse(jsonStr);
 
-        // 恢复 localStorage 数据
+        // 恢复 localStorage
         if (backupObj.localStorage) {
             if (backupObj.localStorage.customLabels) saveCustomLabels(backupObj.localStorage.customLabels);
             if (backupObj.localStorage.tokenLabels) saveTokenLabels(backupObj.localStorage.tokenLabels);
@@ -2624,15 +2628,33 @@ async function importBackup(file) {
             }
         }
 
-        // 恢复 IndexedDB 数据库
+        // 恢复图片
         if (backupObj.images && backupObj.images.length > 0) {
             const oldImages = await dbGetAllImages();
             for (const img of oldImages) await dbDeleteImage(img.id);
 
             for (const img of backupObj.images) {
-                if (img.fileBase64) {
+                if (img.fileCompressedBase64) {
+                    // 解码 Base64 → 压缩数据 → 解压 → Blob
+                    const compressedData = Uint8Array.from(atob(img.fileCompressedBase64), c => c.charCodeAt(0));
+                    const decompressedData = pako.ungzip(compressedData);
+                    const blob = new Blob([decompressedData], { type: img.fileType || 'image/png' });
+                    
+                    // 重新生成缩略图
+                    const thumbnailDataURL = await generateThumbnailFromBlob(blob);
+                    
+                    img.fileBlob = new File([blob], img.fileName || img.name || 'image.png', { type: img.fileType || 'image/png' });
+                    img.thumbnailDataURL = thumbnailDataURL;
+                    delete img.fileCompressedBase64;
+                    delete img.fileType;
+                    delete img.fileName;
+                }
+                // 兼容旧版格式（无压缩的 fileBase64）
+                else if (img.fileBase64) {
                     const blob = base64ToBlob(img.fileBase64, img.fileType || 'image/png');
+                    const thumbnailDataURL = await generateThumbnailFromBlob(blob);
                     img.fileBlob = new File([blob], img.name || 'image.png', { type: img.fileType || 'image/png' });
+                    img.thumbnailDataURL = thumbnailDataURL;
                     delete img.fileBase64;
                     delete img.fileType;
                 }
@@ -2641,10 +2663,10 @@ async function importBackup(file) {
         }
 
         await loadAllImages();
-        showToast('备份数据恢复成功！', 'success');
+        showToast('备份恢复成功！', 'success');
     } catch (e) {
         console.error(e);
-        showToast('备份恢复失败，文件可能已损坏或格式不正确: ' + e.message, 'error');
+        showToast('恢复失败: ' + e.message, 'error');
     }
 }
 
