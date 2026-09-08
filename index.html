@@ -2,20 +2,18 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1e2a3a">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-    <!-- ↓ 新增这一行引入 UPNG.js ↓ -->
     <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
 
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* 核心样式保持不变，仅增加少量分组样式 */
         :root { --bg: #f5f6fa; --card-bg: #ffffff; --sidebar-bg: #1e2a3a; --sidebar-text: #e0e6ed; --primary: #4a6cf7; --primary-hover: #3b5de7; --danger: #e74c3c; --danger-hover: #c0392b; --success: #27ae60; --warning: #f39c12; --text: #2c3e50; --text-secondary: #7f8c8d; --border: #e1e5eb; --shadow: 0 2px 12px rgba(0,0,0,0.08); --shadow-lg: 0 8px 30px rgba(0,0,0,0.15); --radius: 12px; --radius-sm: 8px; --radius-xs: 5px; --transition: 0.25s cubic-bezier(0.4,0,0.2,1); --font: 'Segoe UI','PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif; --header-height: 60px; --filter-height: 48px; --tag-color-bg: #eef1ff; --tag-color-text: #4a6cf7; --tag-color-border: #d5dcff; --safe-area-bottom: env(safe-area-inset-bottom, 0px);}
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent; }
@@ -85,7 +83,8 @@
         .card-action-btn.copy-pos:hover { background:#eef7f0; color:var(--success); border-color:var(--success); }
         .card-action-btn.copy-neg:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
         .card-action-btn.delete-btn:hover { background:#fdf0ef; color:var(--danger); border-color:var(--danger); }
-        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:400; display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(3px); animation:fadeIn 0.2s ease; }
+        .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:550; display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(3px); animation:fadeIn 0.2s ease; }
+
         .modal-overlay.active { display:flex; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
@@ -233,7 +232,9 @@
         .sim-action-btn.diff-btn:hover { background:#dfe5ff; }
         .sim-action-btn.weight-diff-btn { background:#fff8e1; color:#b7791f; border-color:#f0d77b; }
         .sim-action-btn.weight-diff-btn:hover { background:#fff3cd; }
-        .toast-container { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:500; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+
+        .toast-container { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:600; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+
         .toast { background:#333; color:#fff; padding:10px 20px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; box-shadow:var(--shadow-lg); animation:toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards; pointer-events:auto; display:flex; align-items:center; gap:8px; }
         .toast.success { background:var(--success); }
         .toast.error { background:var(--danger); }
@@ -951,45 +952,58 @@
             }
 
             // ==================== 相似度计算 ====================
-            function jaccardSimilarity(setA, setB) {
-                if (setA.length === 0 && setB.length === 0) return 0;
-                const intersection = setA.filter(t => setB.includes(t));
-                const union = new Set([...setA, ...setB]);
-                if (union.size === 0) return 0;
-                return intersection.length / union.size;
-            }
+            let cachedSimilarityResults = null;
+            let lastExcludeCommonState = null;
+            let lastImageCount = -1;
 
-            function getFilteredTokens(image, excludeCommon, commonThreshold = 0.5, allImages = null) {
-                let tokens = [...image.promptTokens];
-                const blockedDiff = getBlockedTokensForDiff();
-                tokens = tokens.filter(t => !blockedDiff.has(t));
-                if (excludeCommon && allImages && allImages.length > 1) {
-                    const totalImages = allImages.length;
-                    tokens = tokens.filter(token => {
-                        const count = allImages.filter(img => img.promptTokens.includes(token)).length;
-                        return count <= totalImages * commonThreshold;
-                    });
-                }
-                return tokens;
-            }
-
-            function calculateSimilarities(images, threshold, excludeCommon) {
+            function calculateSimilaritiesOptimized(images, excludeCommon, commonThreshold = 0.5) {
                 const results = [];
                 const n = images.length;
+                if (n < 2) return results;
+
+                // 1. 预先处理并过滤所有词条，避免在双重循环内重复计算
+                const blockedDiff = getBlockedTokensForDiff();
+                const tokenFrequencies = {};
+
+                if (excludeCommon) {
+                    images.forEach(img => {
+                        const uniqueTokens = new Set(img.promptTokens.filter(t => !blockedDiff.has(t)));
+                        uniqueTokens.forEach(t => tokenFrequencies[t] = (tokenFrequencies[t] || 0) + 1);
+                    });
+                }
+                const freqThreshold = n * commonThreshold;
+
+                const processedImages = images.map(img => {
+                    let tokens = img.promptTokens.filter(t => !blockedDiff.has(t));
+                    if (excludeCommon) tokens = tokens.filter(t => tokenFrequencies[t] <= freqThreshold);
+                    return { img, tokens };
+                });
+
+                // 2. 双重循环仅作交集比对
                 for (let i = 0; i < n; i++) {
+                    const A = processedImages[i];
+                    if (A.tokens.length === 0) continue;
+
                     for (let j = i + 1; j < n; j++) {
-                        const tokensA = getFilteredTokens(images[i], excludeCommon, 0.5, images);
-                        const tokensB = getFilteredTokens(images[j], excludeCommon, 0.5, images);
-                        const sim = jaccardSimilarity(tokensA, tokensB);
-                        if (sim >= threshold) {
-                            const commonTokens = tokensA.filter(t => tokensB.includes(t));
-                            results.push({ imgA: images[i], imgB: images[j], similarity: sim, commonTokens: commonTokens });
+                        const B = processedImages[j];
+                        if (B.tokens.length === 0) continue;
+
+                        const intersection = A.tokens.filter(t => B.tokens.includes(t));
+                        const unionSize = A.tokens.length + B.tokens.length - intersection.length;
+                        if (unionSize === 0) continue;
+
+                        const sim = intersection.length / unionSize;
+
+                        // 为了性能，只保留相似度 > 0.1 的结果供后续滑块调整过滤
+                        if (sim >= 0.1) {
+                            results.push({ imgA: A.img, imgB: B.img, similarity: sim, commonTokens: intersection });
                         }
                     }
                 }
                 results.sort((a, b) => b.similarity - a.similarity);
                 return results;
             }
+
 
             // ==================== PNG 工具函数 ====================
             const crcTable = (() => { let c; const table = []; for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) { c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); } table[n] = c >>> 0; } return table; })();
@@ -2289,6 +2303,7 @@ function renderTokenList() {
                 tagSelectorModal.classList.add('active');
             }
 
+            
             function renderTagSelector() {
                 const customLabels = loadCustomLabels();
                 const tokenLabels = loadTokenLabels();
@@ -2509,13 +2524,42 @@ function openBlockSettingsForBatch() {
 
             function closeSimilarity() { similarityOverlay.classList.remove('active'); }
 
-            function renderSimilarityResults() {
+            function renderSimilarityResults(forceCalc = false) {
                 const threshold = parseFloat(thresholdSlider.value);
                 const excludeCommon = excludeCommonCheckbox.checked;
-                const results = calculateSimilarities(allImages, threshold, excludeCommon);
-                if (results.length === 0) { similarityResults.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-check-circle" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>没有找到超过阈值的相似图片对</div>'; return; }
+
+                // 判断是否需要重新进行耗时计算
+                if (forceCalc || cachedSimilarityResults === null || lastExcludeCommonState !== excludeCommon || lastImageCount !== allImages.length) {
+                    similarityResults.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>正在努力比对中...</div>';
+
+                    // 使用 setTimeout 避免卡死 UI
+                    setTimeout(() => {
+                        cachedSimilarityResults = calculateSimilaritiesOptimized(allImages, excludeCommon, 0.5);
+                        lastExcludeCommonState = excludeCommon;
+                        lastImageCount = allImages.length;
+                        displaySimilarityDOM(threshold);
+                    }, 10);
+                } else {
+                    // 仅拖动滑块时，只走轻量级过滤渲染
+                    displaySimilarityDOM(threshold);
+                }
+            }
+
+            function displaySimilarityDOM(threshold) {
+                const results = cachedSimilarityResults.filter(r => r.similarity >= threshold);
+
+                if (results.length === 0) {
+                    similarityResults.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);font-size:13px;"><i class="fa-solid fa-check-circle" style="font-size:30px;opacity:0.4;display:block;margin-bottom:10px;"></i>没有找到超过阈值的相似图片对</div>';
+                    return;
+                }
+
                 similarityResults.innerHTML = '';
-                results.forEach(result => {
+
+                // 性能保护：防止由于低阈值导致插入数万个节点崩溃，最多渲染 150 条
+                const displayLimit = 150;
+                const slicedResults = results.slice(0, displayLimit);
+
+                slicedResults.forEach(result => {
                     const pair = document.createElement('div');
                     pair.className = 'sim-pair';
                     const isHigh = result.similarity >= 0.6;
@@ -2541,9 +2585,22 @@ function openBlockSettingsForBatch() {
                     pair.querySelector('.diff-btn').addEventListener('click', () => { const a = allImages.find(i => i.id === imgA.id); const b = allImages.find(i => i.id === imgB.id); if (a && b) openDiffModal(a, b); });
                     if (hasWeightDiff) pair.querySelector('.weight-diff-btn').addEventListener('click', () => { const a = allImages.find(i => i.id === imgA.id); const b = allImages.find(i => i.id === imgB.id); if (a && b) openWeightDiffModal(a, b); });
                     pair.querySelectorAll('.sim-thumbs img').forEach(el => el.addEventListener('click', () => openDetail(el.dataset.id)));
-                    pair.querySelectorAll('.sim-action-btn.delete').forEach(btn => btn.addEventListener('click', () => { deleteImage(btn.dataset.id); setTimeout(renderSimilarityResults, 300); }));
+                    pair.querySelectorAll('.sim-action-btn.delete').forEach(btn => btn.addEventListener('click', () => {
+                        deleteImage(btn.dataset.id);
+                        // 删除后清除缓存并重算
+                        cachedSimilarityResults = null;
+                        setTimeout(() => renderSimilarityResults(true), 300);
+                    }));
                     similarityResults.appendChild(pair);
                 });
+
+                // 底部提示信息
+                if (results.length > displayLimit) {
+                    const info = document.createElement('div');
+                    info.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:10px;";
+                    info.innerText = `为保证流畅，仅显示前 ${displayLimit} 条结果 (共 ${results.length} 条)`;
+                    similarityResults.appendChild(info);
+                }
             }
 
             function toggleSelectionMode() {
@@ -2817,7 +2874,12 @@ async function importBackup(file) {
                 similarityBtn.addEventListener('click', openSimilarity);
                 similarityCloseBtn.addEventListener('click', closeSimilarity);
                 similarityOverlay.addEventListener('click', (e) => { if (e.target === similarityOverlay) closeSimilarity(); });
-                thresholdSlider.addEventListener('input', () => { thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2); renderSimilarityResults(); });
+                thresholdSlider.addEventListener('input', () => {
+    thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2);
+});
+thresholdSlider.addEventListener('change', () => {
+    renderSimilarityResults();
+});
                 excludeCommonCheckbox.addEventListener('change', renderSimilarityResults);
 
                 downloadModeBtn.addEventListener('click', toggleSelectionMode);
