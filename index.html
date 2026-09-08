@@ -700,93 +700,97 @@
                 return metadata;
             }
 
-            // ==================== 词条提取 ====================
-            function parseBrackets(rawToken) {
-                let token = rawToken.trim();
-                let multiplier = 1.0;
-                let changed = true;
-                while (changed) {
-                    changed = false;
-                    if (token.startsWith('{') && token.endsWith('}')) {
-                        multiplier *= 1.05;
-                        token = token.slice(1, -1).trim();
-                        changed = true;
-                    }
-                    if (token.startsWith('[') && token.endsWith(']')) {
-                        multiplier *= 1 / 1.05;
-                        token = token.slice(1, -1).trim();
-                        changed = true;
-                    }
-                }
-                return { token, multiplier };
-            }
+// ==================== 词条提取 ====================
+function parseBrackets(rawToken) {
+    let token = rawToken.trim();
+    let multiplier = 1.0;
+    let changed = true;
+    while (changed) {
+        changed = false;
+        if (token.startsWith('{') && token.endsWith('}')) {
+            multiplier *= 1.05;
+            token = token.slice(1, -1).trim();
+            changed = true;
+        }
+        if (token.startsWith('[') && token.endsWith(']')) {
+            multiplier *= 1 / 1.05;
+            token = token.slice(1, -1).trim();
+            changed = true;
+        }
+    }
+    return { token, multiplier };
+}
 
-            function extractTokenData(promptStr) {
-                if (!promptStr) return { tokens: [], weights: {} };
-                let cleaned = promptStr;
-                cleaned = cleaned.replace(/{{tar}}/g, '');
-                const tokensSet = new Set();
-                const weights = {};
+function extractTokenData(promptStr) {
+    if (!promptStr) return { tokens: [], weights: {} };
+    let cleaned = promptStr;
+    cleaned = cleaned.replace(/{{tar}}/g, '');
+    const tokensSet = new Set();
+    const weights = {};
 
-                function processPlainToken(rawToken) {
-                    let token = rawToken.trim();
-                    if (!token) return null;
-                    const bracket = parseBrackets(token);
-                    token = bracket.token;
-                    let weight = bracket.multiplier;
-                    const suffixMatch = token.match(/(.+?):\s*(-?\d+(?:\.\d+)?)\s*$/);
-                    if (suffixMatch) {
-                        token = suffixMatch[1].trim();
-                        const w = parseFloat(suffixMatch[2]);
-                        if (!isNaN(w)) weight = w;
-                    }
-                    token = token.replace(/[()\[\]<>]/g, '');
-                    token = token.replace(/\s+/g, ' ').trim();
-                    token = token.replace(/^[\d\s.]+/, '').trim();
-                    if (!token || token.length < 1 || token.length >= 200) return null;
-                    return { token, weight };
-                }
-                const weightBlocks = [];
-                const blockRegex = /(-?\d+(?:\.\d+)?)\s*::\s*([\s\S]*?)\s*::/g;
-                let match;
-                let remainingStr = cleaned;
-                while ((match = blockRegex.exec(cleaned)) !== null) {
-                    const blockWeight = parseFloat(match[1]);
-                    const blockContent = match[2];
-                    weightBlocks.push({ weight: blockWeight, content: blockContent });
-                    remainingStr = remainingStr.replace(match[0], '');
-                }
-                const parts = remainingStr.split(',');
-                for (let part of parts) {
-                    const result = processPlainToken(part);
-                    if (result) {
-                        tokensSet.add(result.token);
-                        weights[result.token] = result.weight;
-                    }
-                }
-                for (const block of weightBlocks) {
-                    const blockWeight = block.weight;
-                    const blockTokens = block.content.split(',');
-                    for (let rawToken of blockTokens) {
-                        rawToken = rawToken.trim();
-                        if (!rawToken) continue;
-                        const bracket = parseBrackets(rawToken);
-                        let token = bracket.token;
-                        let weight = blockWeight * bracket.multiplier;
-                        token = token.replace(/[()\[\]<>]/g, '');
-                        token = token.replace(/\s+/g, ' ').trim();
-                        token = token.replace(/^[\d\s.]+/, '').trim();
-                        if (!token || token.length < 1 || token.length >= 200) continue;
-                        tokensSet.add(token);
-                        weights[token] = weight;
-                    }
-                }
-                return { tokens: Array.from(tokensSet), weights };
+    function processPlainToken(rawToken) {
+        let token = rawToken.trim();
+        if (!token) return null;
+        const bracket = parseBrackets(token);
+        token = bracket.token;
+        let weight = bracket.multiplier;
+        const suffixMatch = token.match(/(.+?):\s*(-?\d+(?:\.\d+)?)\s*$/);
+        if (suffixMatch) {
+            token = suffixMatch[1].trim();
+            const w = parseFloat(suffixMatch[2]);
+            if (!isNaN(w)) weight = w;
+        }
+        // 移除括号和尖括号等符号
+        token = token.replace(/[()\[\]<>]/g, '');
+        token = token.replace(/\s+/g, ' ').trim();
+        
+        if (/^\d+(\.\d+)?$/.test(token)) {
+            // 纯数字词条，跳过
+            return null;
+        }
+        // 过滤掉过短或过长的词条
+        if (!token || token.length < 1 || token.length >= 200) return null;
+        return { token, weight };
+    }
+    const weightBlocks = [];
+    const blockRegex = /(-?\d+(?:\.\d+)?)\s*::\s*([\s\S]*?)\s*::/g;
+    let match;
+    let remainingStr = cleaned;
+    while ((match = blockRegex.exec(cleaned)) !== null) {
+        const blockWeight = parseFloat(match[1]);
+        const blockContent = match[2];
+        weightBlocks.push({ weight: blockWeight, content: blockContent });
+        remainingStr = remainingStr.replace(match[0], '');
+    }
+    const parts = remainingStr.split(',');
+    for (let part of parts) {
+        const result = processPlainToken(part);
+        if (result) {
+            tokensSet.add(result.token);
+            weights[result.token] = result.weight;
+        }
+    }
+    for (const block of weightBlocks) {
+        const blockWeight = block.weight;
+        const blockTokens = block.content.split(',');
+        for (let rawToken of blockTokens) {
+            rawToken = rawToken.trim();
+            if (!rawToken) continue;
+            const bracket = parseBrackets(rawToken);
+            let token = bracket.token;
+            let weight = blockWeight * bracket.multiplier;
+            token = token.replace(/[()\[\]<>]/g, '');
+            token = token.replace(/\s+/g, ' ').trim();
+            if (/^\d+(\.\d+)?$/.test(token)) {
+                continue; // 纯数字跳过
             }
-
-            function extractTokens(promptStr) {
-                return extractTokenData(promptStr).tokens;
-            }
+            if (!token || token.length < 1 || token.length >= 200) continue;
+            tokensSet.add(token);
+            weights[token] = weight;
+        }
+    }
+    return { tokens: Array.from(tokensSet), weights };
+}
 
             // ==================== 标签、屏蔽与翻译数据管理 (localStorage) ====================
             const LS_PREFIX = 'naiTagManager_';
