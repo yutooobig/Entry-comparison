@@ -453,8 +453,12 @@
             <button class="batch-btn" id="batchSelectAllBtn"><i class="fa-solid fa-check-double"></i> 全选</button>
             <button class="batch-btn" id="batchDeselectAllBtn"><i class="fa-solid fa-square"></i> 取消</button>
             <button class="batch-btn primary" id="batchApplyLabelBtn"><i class="fa-solid fa-tag"></i> 打标签</button>
+            <!-- ↓ 新增：批量屏蔽按钮 ↓ -->
+            <button class="batch-btn danger" id="batchApplyBlockBtn"><i class="fa-solid fa-ban"></i> 屏蔽</button>
+            <!-- ↑ 新增：批量屏蔽按钮 ↑ -->
             <span class="batch-selected-count" id="batchSelectedCount">已选 0 项</span>
         </div>
+
     </div>
 
     <!-- 相似度面板 -->
@@ -714,7 +718,6 @@
             const LS_CUSTOM_LABELS = LS_PREFIX + 'customLabels';
             const LS_TOKEN_LABELS = LS_PREFIX + 'tokenLabels';
             const LS_BLOCKED_TOKENS = LS_PREFIX + 'blockedTokens';
-            const LS_BLOCKED_LABELS = LS_PREFIX + 'blockedLabels';
             const LS_TOKEN_TRANSLATIONS = LS_PREFIX + 'tokenTranslations';
             const LS_SHOW_TRANSLATION = LS_PREFIX + 'showTranslation';
 
@@ -735,12 +738,6 @@
             }
             function saveBlockedTokens(data) {
                 localStorage.setItem(LS_BLOCKED_TOKENS, JSON.stringify(data));
-            }
-            function loadBlockedLabels() {
-                try { return JSON.parse(localStorage.getItem(LS_BLOCKED_LABELS)) || {}; } catch (e) { return {}; }
-            }
-            function saveBlockedLabels(data) {
-                localStorage.setItem(LS_BLOCKED_LABELS, JSON.stringify(data));
             }
             function loadTranslations() {
                 try { return JSON.parse(localStorage.getItem(LS_TOKEN_TRANSLATIONS)) || {}; } catch (e) { return {}; }
@@ -802,16 +799,7 @@
 
             function getEffectiveBlockSettings(token) {
                 const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = getTokenLabels(token);
                 const settings = { display: false, copy: false, diff: false };
-                tokenLabels.forEach(label => {
-                    if (blockedLabels[label]) {
-                        if (blockedLabels[label].display) settings.display = true;
-                        if (blockedLabels[label].copy) settings.copy = true;
-                        if (blockedLabels[label].diff) settings.diff = true;
-                    }
-                });
                 if (blockedTokens[token]) {
                     if (blockedTokens[token].display !== undefined) settings.display = blockedTokens[token].display;
                     if (blockedTokens[token].copy !== undefined) settings.copy = blockedTokens[token].copy;
@@ -823,17 +811,8 @@
             function getBlockedTokensForCopy() {
                 const blocked = new Set();
                 const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = loadTokenLabels();
                 for (const [token, settings] of Object.entries(blockedTokens)) {
                     if (settings.copy) blocked.add(token);
-                }
-                for (const [label, settings] of Object.entries(blockedLabels)) {
-                    if (settings.copy) {
-                        for (const [token, labels] of Object.entries(tokenLabels)) {
-                            if (labels.includes(label)) blocked.add(token);
-                        }
-                    }
                 }
                 return blocked;
             }
@@ -841,17 +820,8 @@
             function getBlockedTokensForDiff() {
                 const blocked = new Set();
                 const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = loadTokenLabels();
                 for (const [token, settings] of Object.entries(blockedTokens)) {
                     if (settings.diff) blocked.add(token);
-                }
-                for (const [label, settings] of Object.entries(blockedLabels)) {
-                    if (settings.diff) {
-                        for (const [token, labels] of Object.entries(tokenLabels)) {
-                            if (labels.includes(label)) blocked.add(token);
-                        }
-                    }
                 }
                 return blocked;
             }
@@ -1043,6 +1013,7 @@
             const batchSelectAllBtn = document.getElementById('batchSelectAllBtn');
             const batchDeselectAllBtn = document.getElementById('batchDeselectAllBtn');
             const batchApplyLabelBtn = document.getElementById('batchApplyLabelBtn');
+            const batchApplyBlockBtn = document.getElementById('batchApplyBlockBtn'); // 新增
             const batchSelectedCount = document.getElementById('batchSelectedCount');
             const detailModal = document.getElementById('detailModal');
             const modalCloseBtn = document.getElementById('modalCloseBtn');
@@ -1604,25 +1575,16 @@
             }
 
             // ==================== 屏蔽分组相关 ====================
+
             function getBlockedTokensByGroup(group) {
                 const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = loadTokenLabels();
                 const result = new Set();
-                // 词条级屏蔽
                 for (const [token, settings] of Object.entries(blockedTokens)) {
                     if (settings[group]) result.add(token);
                 }
-                // 标签级屏蔽
-                for (const [label, settings] of Object.entries(blockedLabels)) {
-                    if (settings[group]) {
-                        for (const [token, labels] of Object.entries(tokenLabels)) {
-                            if (labels.includes(label)) result.add(token);
-                        }
-                    }
-                }
                 return result;
             }
+
 
             function renderBlockGroupBar() {
                 if (currentTokenTab !== 'blocked') {
@@ -1630,9 +1592,9 @@
                     return;
                 }
                 const groups = [
-                    { key: 'display', icon: 'fa-eye', label: '屏蔽展示' },
-                    { key: 'copy', icon: 'fa-copy', label: '屏蔽复制' },
-                    { key: 'diff', icon: 'fa-code-compare', label: '屏蔽对比' }
+                    { key: 'display', icon: 'fa-eye', label: '展示' },
+                    { key: 'copy', icon: 'fa-copy', label: '复制' },
+                    { key: 'diff', icon: 'fa-code-compare', label: '对比' }
                 ];
                 let html = '';
                 groups.forEach(g => {
@@ -1731,9 +1693,6 @@
 
             function unblockTokenFromGroup(token) {
                 const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = loadTokenLabels();
-                // 移除词条级屏蔽的当前维度
                 if (blockedTokens[token]) {
                     blockedTokens[token][currentBlockGroup] = false;
                     if (!blockedTokens[token].display && !blockedTokens[token].copy && !blockedTokens[token].diff) {
@@ -1741,30 +1700,33 @@
                     }
                     saveBlockedTokens(blockedTokens);
                 }
-                // 移除标签级屏蔽的当前维度（如果该标签只屏蔽了当前维度，则移除整个标签屏蔽）
-                for (const [label, settings] of Object.entries(blockedLabels)) {
-                    if (settings[currentBlockGroup]) {
-                        const affectedTokens = Object.entries(tokenLabels).filter(([t, labels]) => labels.includes(label)).map(([t]) => t);
-                        if (affectedTokens.includes(token)) {
-                            // 检查是否还有其他词条使用该标签屏蔽
-                            const otherTokens = affectedTokens.filter(t => t !== token);
-                            if (otherTokens.length === 0) {
-                                // 如果没有其他词条，删除整个标签屏蔽
-                                delete blockedLabels[label];
-                            } else {
-                                // 否则只移除当前词条对该标签的关联（无法直接移除，所以只能保留该标签屏蔽，但词条已不在其下）
-                                // 更合理：保留标签屏蔽，但词条本身从该标签移除？但这里我们保留标签屏蔽，但词条已经不在该标签下了，所以不影响。
-                                // 简单处理：由于我们无法单独移除词条-标签关联，但后续词条不再受该标签屏蔽影响。
-                            }
-                            saveBlockedLabels(blockedLabels);
-                        }
-                    }
-                }
                 batchUnblockSelected.delete(token);
                 renderBlockGroupBar();
                 renderBlockedTokenList();
                 showToast(`已取消 "${token}" 的 ${currentBlockGroup} 屏蔽`, 'success');
             }
+
+            function batchUnblockTokens() {
+                if (batchUnblockSelected.size === 0) { showToast('请先选择词条', 'error'); return; }
+                if (!confirm(`确定取消 ${batchUnblockSelected.size} 个词条的 "${currentBlockGroup}" 屏蔽吗？`)) return;
+                const tokens = Array.from(batchUnblockSelected);
+                const blockedTokens = loadBlockedTokens();
+
+                tokens.forEach(token => {
+                    if (blockedTokens[token]) {
+                        blockedTokens[token][currentBlockGroup] = false;
+                        if (!blockedTokens[token].display && !blockedTokens[token].copy && !blockedTokens[token].diff) {
+                            delete blockedTokens[token];
+                        }
+                    }
+                });
+                saveBlockedTokens(blockedTokens);
+                batchUnblockSelected.clear();
+                renderBlockGroupBar();
+                renderBlockedTokenList();
+                showToast(`已批量取消 ${tokens.length} 个词条的屏蔽`, 'success');
+            }
+
 
             function batchUnblockTokens() {
                 if (batchUnblockSelected.size === 0) { showToast('请先选择词条', 'error'); return; }
@@ -2013,10 +1975,9 @@
             }
 
             // ==================== 标签管理模态框 ====================
-            function openTagManager() {
+             function openTagManager() {
                 const customLabels = loadCustomLabels();
                 const tokenLabels = loadTokenLabels();
-                const blockedLabels = loadBlockedLabels();
                 let selectedTagsForBatch = new Set();
 
                 let html = '';
@@ -2036,7 +1997,6 @@
                     html += '<div class="tag-manage-list">';
                     customLabels.forEach(label => {
                         const count = Object.entries(tokenLabels).filter(([t, labels]) => labels.includes(label)).length;
-                        const isBlocked = blockedLabels[label];
                         const color = getLabelColor(label);
                         html += `
                             <div class="tag-manage-item">
@@ -2046,8 +2006,6 @@
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span class="tag-manage-count">${count} 词条</span>
-                                    ${isBlocked ? '<span style="font-size:10px;color:var(--danger);">🚫</span>' : ''}
-                                    <button class="tag-manage-block" data-label="${label}" title="屏蔽设置"><i class="fa-solid fa-ban"></i></button>
                                     <button class="tag-manage-delete" data-label="${label}" title="删除标签"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>`;
@@ -2061,13 +2019,6 @@
                     </div>
                 `;
                 tagManagerBody.innerHTML = html;
-
-                tagManagerBody.querySelectorAll('.tag-manage-block').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const label = btn.dataset.label;
-                        openBlockSettingsForLabel(label);
-                    });
-                });
 
                 const deleteLabels = (labelsToDelete) => {
                     if (labelsToDelete.length === 0) return;
@@ -2085,10 +2036,6 @@
                         if (tkLabels[token].length === 0) delete tkLabels[token];
                     }
                     saveTokenLabels(tkLabels);
-
-                    const blkLabels = loadBlockedLabels();
-                    labelsToDelete.forEach(l => delete blkLabels[l]);
-                    saveBlockedLabels(blkLabels);
 
                     openTagManager();
                     renderTagFilterBar();
@@ -2152,6 +2099,7 @@
 
                 tagManagerModal.classList.add('active');
             }
+
 
             function closeTagManager() { tagManagerModal.classList.remove('active'); }
 
@@ -2289,54 +2237,6 @@
                     blockSettingsModal.classList.remove('active');
                     renderTokenList();
                     showToast(`已更新 "${token}" 的屏蔽设置`, 'success');
-                });
-                blockSettingsModal.classList.add('active');
-            }
-
-            function openBlockSettingsForLabel(label) {
-                blockSettingsTarget = { type: 'label', label };
-                const settings = loadBlockedLabels()[label] || { display: false, copy: false, diff: false };
-                blockSettingsTitle.innerHTML = `<i class="fa-solid fa-ban"></i> 标签屏蔽设置: "${label}"`;
-                blockSettingsBody.innerHTML = `
-                    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">屏蔽该标签下所有词条（勾选即屏蔽）:</p>
-                    <div class="block-settings-row">
-                        <input type="checkbox" id="blockDisplay" ${settings.display ? 'checked' : ''}>
-                        <div><span class="block-label">屏蔽展示</span><br><span class="block-desc">在词条库列表中隐藏</span></div>
-                    </div>
-                    <div class="block-settings-row">
-                        <input type="checkbox" id="blockCopy" ${settings.copy ? 'checked' : ''}>
-                        <div><span class="block-label">屏蔽复制</span><br><span class="block-desc">复制提示词时排除</span></div>
-                    </div>
-                    <div class="block-settings-row">
-                        <input type="checkbox" id="blockDiff" ${settings.diff ? 'checked' : ''}>
-                        <div><span class="block-label">屏蔽差异对比</span><br><span class="block-desc">差异对比时忽略</span></div>
-                    </div>
-                    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-                        <button class="copy-btn" id="blockResetBtn">重置</button>
-                        <button class="copy-btn positive-btn" id="blockSaveBtn"><i class="fa-solid fa-check"></i> 保存</button>
-                    </div>
-                `;
-                document.getElementById('blockResetBtn').addEventListener('click', () => {
-                    document.getElementById('blockDisplay').checked = false;
-                    document.getElementById('blockCopy').checked = false;
-                    document.getElementById('blockDiff').checked = false;
-                });
-                document.getElementById('blockSaveBtn').addEventListener('click', () => {
-                    const display = document.getElementById('blockDisplay').checked;
-                    const copy = document.getElementById('blockCopy').checked;
-                    const diff = document.getElementById('blockDiff').checked;
-                    const blockedLabels = loadBlockedLabels();
-                    if (display || copy || diff) {
-                        blockedLabels[label] = { display, copy, diff };
-                    } else {
-                        delete blockedLabels[label];
-                    }
-                    saveBlockedLabels(blockedLabels);
-                    blockSettingsModal.classList.remove('active');
-                    openTagManager();
-                    renderTagFilterBar();
-                    renderTokenList();
-                    showToast(`已更新标签"${label}"的屏蔽设置`, 'success');
                 });
                 blockSettingsModal.classList.add('active');
             }
@@ -2525,6 +2425,9 @@
                     renderTokenList();
                 });
                 batchApplyLabelBtn.addEventListener('click', openTagSelectorForBatch);
+                                // (新) 新增事件
+                batchApplyBlockBtn.addEventListener('click', openBlockSettingsForBatch);
+
 
                 similarityBtn.addEventListener('click', openSimilarity);
                 similarityCloseBtn.addEventListener('click', closeSimilarity);
