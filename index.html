@@ -9,6 +9,9 @@
     <meta name="theme-color" content="#1e2a3a">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <!-- ↓ 新增这一行引入 UPNG.js ↓ -->
+    <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
+
     <title>NAI 提示词管理器</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -1027,26 +1030,86 @@
                 });
             }
             
-            function compressAndInjectEXIF(imageObj, quality = 0.6) {
+// 往 PNG 中注入 tEXt chunk 的工具函数
+function injectPNGMetadata(blob, metadataObj) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const arrayBuffer = await blob.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+
+            const chunks = [];
+            let offset = 8; // 跳过 PNG Signature
+            while (offset < bytes.length) {
+                if (offset + 8 > bytes.length) break;
+                const length = (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+                const dataEnd = offset + 8 + length;
+                chunks.push(bytes.slice(offset, dataEnd + 4));
+                offset = dataEnd + 4;
+            }
+
+            const keyword = 'Description';
+            const textContent = JSON.stringify(metadataObj);
+            const textBytes = new TextEncoder().encode(keyword + '\0' + textContent);
+            const chunkLength = textBytes.length;
+            const chunkLengthBytes = uint32ToBytes(chunkLength);
+            const chunkTypeBytes = new TextEncoder().encode('tEXt');
+
+            const chunkData = new Uint8Array(4 + chunkLength);
+            chunkData.set(chunkTypeBytes, 0);
+            chunkData.set(textBytes, 4);
+            const crc = crc32(chunkData);
+            const crcBytes = uint32ToBytes(crc);
+
+            const newChunk = new Uint8Array(4 + chunkLength + 4);
+            newChunk.set(chunkLengthBytes, 0);
+            newChunk.set(chunkData, 4);
+            newChunk.set(crcBytes, 4 + chunkLength);
+
+            const signature = bytes.slice(0, 8);
+            const resultChunks = [signature, chunks[0], newChunk, ...chunks.slice(1)];
+
+            const totalLength = resultChunks.reduce((acc, c) => acc + c.length, 0);
+            const resultBytes = new Uint8Array(totalLength);
+            let pos = 0;
+            for(const c of resultChunks) {
+                resultBytes.set(c, pos);
+                pos += c.length;
+            }
+
+            resolve(new Blob([resultBytes], { type: 'image/png' }));
+        } catch(e) {
+            reject(e);
+        }
+    });
+}
+
+// 降级为 8位色(256色) 纯净 PNG，然后注入元数据
+function compressAndInjectPNG(imageObj, colors = 256) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const url = URL.createObjectURL(imageObj.fileBlob);
+
         img.onload = () => {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
 
-            // 丢弃透明通道，填充纯白底色
+            // 填充白底，丢弃透明通道带来的干扰
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
 
-            // 导出为有损 JPEG
-            const jpegDataUrl = canvas.toDataURL('image/jpeg', quality);
+            // 获取 RGBA 像素数据
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             URL.revokeObjectURL(url);
 
             try {
+                // 使用 UPNG.js 将图像转化为 256 色索引 PNG
+                // 第四个参数 256 即代表保留 256 种颜色
+                const compressedArrayBuffer = UPNG.encode([imageData.data.buffer], canvas.width, canvas.height, colors);
+                const compressedBlob = new Blob([compressedArrayBuffer], { type: 'image/png' });
+
                 const metaDict = {
                     prompt: imageObj.prompt || '',
                     uc: imageObj.negativePrompt || '',
@@ -1055,25 +1118,21 @@
                     sampler: imageObj.sampler,
                     scale: imageObj.scale
                 };
-                const metaStr = JSON.stringify(metaDict);
-                const zerothIfd = {};
-                zerothIfd[piexif.ImageIFD.ImageDescription] = metaStr;
-                const exifObj = { "0th": zerothIfd };
-                const exifBytes = piexif.dump(exifObj);
-                const newJpegDataUrl = piexif.insert(exifBytes, jpegDataUrl);
 
-                const byteString = atob(newJpegDataUrl.split(',')[1]);
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
-                resolve(new Blob([ab], { type: 'image/jpeg' }));
+                // 调用注入函数
+                injectPNGMetadata(compressedBlob, metaDict).then(finalBlob => {
+                    resolve(finalBlob);
+                }).catch(e => {
+                    console.error('元数据注入失败:', e);
+                    resolve(compressedBlob); // 如果失败至少返回降级过颜色的图像
+                });
+
             } catch (e) {
-                console.error('EXIF 注入失败:', e);
-                resolve(null);
+                console.error('UPNG 压缩失败:', e);
+                reject(e);
             }
         };
+
         img.onerror = () => {
             URL.revokeObjectURL(url);
             reject(new Error('图片加载失败'));
@@ -1842,61 +1901,27 @@
                 showToast(`已取消 "${token}" 的 ${currentBlockGroup} 屏蔽`, 'success');
             }
 
-            function batchUnblockTokens() {
-                if (batchUnblockSelected.size === 0) { showToast('请先选择词条', 'error'); return; }
-                if (!confirm(`确定取消 ${batchUnblockSelected.size} 个词条的 "${currentBlockGroup}" 屏蔽吗？`)) return;
-                const tokens = Array.from(batchUnblockSelected);
-                const blockedTokens = loadBlockedTokens();
 
-                tokens.forEach(token => {
-                    if (blockedTokens[token]) {
-                        blockedTokens[token][currentBlockGroup] = false;
-                        if (!blockedTokens[token].display && !blockedTokens[token].copy && !blockedTokens[token].diff) {
-                            delete blockedTokens[token];
-                        }
-                    }
-                });
-                saveBlockedTokens(blockedTokens);
-                batchUnblockSelected.clear();
-                renderBlockGroupBar();
-                renderBlockedTokenList();
-                showToast(`已批量取消 ${tokens.length} 个词条的屏蔽`, 'success');
+function batchUnblockTokens() {
+    if (batchUnblockSelected.size === 0) { showToast('请先选择词条', 'error'); return; }
+    if (!confirm(`确定取消 ${batchUnblockSelected.size} 个词条的 "${currentBlockGroup}" 屏蔽吗？`)) return;
+    const tokens = Array.from(batchUnblockSelected);
+    const blockedTokens = loadBlockedTokens();
+
+    tokens.forEach(token => {
+        if (blockedTokens[token]) {
+            blockedTokens[token][currentBlockGroup] = false;
+            if (!blockedTokens[token].display && !blockedTokens[token].copy && !blockedTokens[token].diff) {
+                delete blockedTokens[token];
             }
-
-
-            function batchUnblockTokens() {
-                if (batchUnblockSelected.size === 0) { showToast('请先选择词条', 'error'); return; }
-                if (!confirm(`确定取消 ${batchUnblockSelected.size} 个词条的 "${currentBlockGroup}" 屏蔽吗？`)) return;
-                const tokens = Array.from(batchUnblockSelected);
-                const blockedTokens = loadBlockedTokens();
-                const blockedLabels = loadBlockedLabels();
-                const tokenLabels = loadTokenLabels();
-
-                tokens.forEach(token => {
-                    if (blockedTokens[token]) {
-                        blockedTokens[token][currentBlockGroup] = false;
-                        if (!blockedTokens[token].display && !blockedTokens[token].copy && !blockedTokens[token].diff) {
-                            delete blockedTokens[token];
-                        }
-                    }
-                    // 标签级：移除该词条关联的标签中屏蔽当前维度的标签（如果该标签没有其他词条，则删除整个标签屏蔽）
-                    const labels = tokenLabels[token] || [];
-                    labels.forEach(label => {
-                        if (blockedLabels[label] && blockedLabels[label][currentBlockGroup]) {
-                            const affectedTokens = Object.entries(tokenLabels).filter(([t, ls]) => ls.includes(label)).map(([t]) => t);
-                            if (affectedTokens.length <= 1) {
-                                delete blockedLabels[label];
-                            }
-                        }
-                    });
-                });
-                saveBlockedTokens(blockedTokens);
-                saveBlockedLabels(blockedLabels);
-                batchUnblockSelected.clear();
-                renderBlockGroupBar();
-                renderBlockedTokenList();
-                showToast(`已批量取消 ${tokens.length} 个词条的屏蔽`, 'success');
-            }
+        }
+    });
+    saveBlockedTokens(blockedTokens);
+    batchUnblockSelected.clear();
+    renderBlockGroupBar();
+    renderBlockedTokenList();
+    showToast(`已批量取消 ${tokens.length} 个词条的屏蔽`, 'success');
+}
 
             function updateBatchUnblockUI() {
                 const count = batchUnblockSelected.size;
@@ -2992,15 +3017,15 @@ ${tokens.join('\n')}`;
 
     for (const img of imagesToCompress) {
         try {
-            // 进行压缩，设置质量 0.6
-            const compressedBlob = await compressAndInjectEXIF(img, 0.6);
+            // 调用新的 PNG 压缩函数
+            const compressedBlob = await compressAndInjectPNG(img, 256);
+
             if (compressedBlob) {
                 // 1. 替换内存中的数据
                 img.fileBlob = compressedBlob;
-                img.name = img.name.replace(/\.png$/i, '') + '.jpg'; // 改名
                 img.isCompressed = true;
 
-                // 2. 利用现有的 dbAddImage (底层是 put) 更新/覆盖数据库中的原记录
+                // 2. 利用现有的 dbAddImage 更新/覆盖数据库中的原记录
                 await dbAddImage(img);
                 successCount++;
             }
@@ -3008,6 +3033,7 @@ ${tokens.join('\n')}`;
             console.error(`压缩 ${img.name} 失败:`, e);
         }
     }
+
 
     showToast(`完成！成功压缩了 ${successCount} 张图片的存储体积`, 'success');
     // 重新计算总体积并取消全选
